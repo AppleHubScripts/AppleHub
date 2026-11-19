@@ -1,4 +1,4 @@
---// Apple Hub v9 | Blox Fruits | Delta Executor (mobile + PC)  — PARTE 1/2
+8--// Apple Hub v9 | Blox Fruits | Delta Executor (mobile + PC)  — PARTE 1/2
 if getgenv and getgenv().AppleHubUnload then pcall(getgenv().AppleHubUnload) end
 
 local Players = game:GetService("Players")
@@ -3561,4 +3561,990 @@ end)()
 	V.applyRadar(); V.rebuildDock(); V.applyCoords()
 	layoutTabs()
 	notify("Apple Hub v16", "Novidades: Mapa, Dock, Filtros, Webhook, Monitor...", 4)
+end)()
+-- ===== APPLE HUB v26 — PARTE 4 (cole depois das Partes 1, 2 [v9] e 3 [v16]) =====
+
+------------------------------------------------------------------
+-- BLOCO A: estado, temas extras, funções novas
+------------------------------------------------------------------
+;(function()
+	if not (G and G.V and G.V.webhook and addPage) then warn("[AppleHub v26] Cole esta parte DEPOIS das Partes 1 e 2 (v9) e da Parte 3 (v16).") return end
+	local Z = {pages = {}}
+	G.Z = Z
+	local NEW = {
+		StealthOn = false, StealthRange = 120, StealthAct = "Pausar farm", StealthFriends = true,
+		SniperOn = false, SniperWait = 12, SniperGrab = true, SniperHop = true, ReExec = false,
+		LockClock = false, ClockLockVal = 14, CamMode = "Normal", ComboSeq = "Z,X,C", ComboDelay = 500, ComboLoop = false,
+		MusicId = "", MusicVol = 50, MusicLoop = true, Notes = "",
+		EspOn = false, EspDist = 1500, EspSize = 12, EspHP = true, EspLv = true, EspBox = false, EspTracer = false, EspColor = "Vermelho", EspMax = 25,
+		TouchFX = false, TouchStyle = "Faíscas", TouchCount = 10, TouchColor = "Tema",
+		GhostOn = false, GhostAfter = 8, GhostLevel = 70,
+		BgImage = "", BgAlpha = 40, BgScale = "Crop",
+		AutoTheme = false, AutoThemeMin = 5, PaletteKey = "K",
+		SchedPick = "Auto Level", SchedMin = 10, SchedAct = "Ligar", Profiles = {},
+	}
+	for k, v in pairs(NEW) do
+		State[k] = v
+		Default[k] = type(v) == "table" and {} or v
+		table.insert(SAVE_KEYS, k)
+	end
+	pcall(function()
+		if isfile and isfile(CFG_FILE) then
+			local d = HttpService:JSONDecode(readfile(CFG_FILE))
+			for k, v in pairs(NEW) do
+				if d[k] ~= nil and type(d[k]) == type(v) then State[k] = d[k] end
+			end
+		end
+	end)
+	local URL_FILE = "AppleHub_v26_url.txt"
+	Z.reexecSrc = ""
+	pcall(function() if isfile and isfile(URL_FILE) then Z.reexecSrc = readfile(URL_FILE) end end)
+	Z.setURL = function(u)
+		Z.reexecSrc = u
+		pcall(function() writefile(URL_FILE, u) end)
+	end
+	if State.Title == Default.Title or tostring(State.Title):find("v16", 1, true) then
+		State.Title = "Apple Hub v26  •  Blox Fruits"
+		titleLabel.Text = State.Title
+	end
+
+	-- temas extras
+	local extraThemes = {
+		{"Aqua", "#061a1a", "#0a2828", "#103c3c", "#e6fffb", "#78b8b0", "#2dd4bf", "#0ea5e9"},
+		{"Volcano", "#160805", "#240e08", "#38160d", "#ffefe6", "#b98a78", "#ff5a1f", "#ffc107"},
+		{"Orchid", "#160a1f", "#221030", "#341a48", "#fbeaff", "#b48ac8", "#c471ed", "#f64f9c"},
+		{"Midori", "#071208", "#0e1f10", "#183018", "#eaffec", "#7fb583", "#4ade80", "#a3e635"},
+		{"Steam", "#14171c", "#1d2229", "#2a313a", "#f0f4f8", "#8b97a6", "#5eead4", "#60a5fa"},
+		{"Honey", "#1a1405", "#271e08", "#3a2d0f", "#fff8e1", "#bfa66a", "#fbbf24", "#f97316"},
+		{"Void", "#000000", "#050507", "#0d0d12", "#e8e8f0", "#6c6c80", "#8b5cf6", "#06b6d4"},
+		{"Bubblegum", "#fff0f6", "#ffdbe9", "#ffffff", "#3a1426", "#a0708a", "#ff5fa2", "#a78bfa"},
+	}
+	Z.extraNames = {}
+	for _, e in ipairs(extraThemes) do
+		Themes[e[1]] = th(e[2], e[3], e[4], e[5], e[6], e[7], e[8])
+		table.insert(ThemeNames, #ThemeNames, e[1])
+		table.insert(Z.extraNames, e[1])
+	end
+
+	-- novas funções (dock, atalhos, console, paleta, perfis)
+	local extra = {{"Modo Furtivo", "StealthOn"}, {"Fruit Sniper", "SniperOn"}, {"ESP+", "EspOn"}, {"Toque Mágico", "TouchFX"},
+		{"Modo Fantasma", "GhostOn"}, {"Travar Hora", "LockClock"}, {"Combo Loop", "ComboLoop"}, {"Tema Automático", "AutoTheme"}}
+	for _, f in ipairs(extra) do
+		table.insert(G.Feats, f)
+		table.insert(G.FeatNames, f[1])
+		G.FeatMap[f[1]] = f[2]
+	end
+end)()
+
+------------------------------------------------------------------
+-- BLOCO B: paleta de comandos
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Z) then return end
+	local Z, V = G.Z, G.V
+	local white = Color3.new(1, 1, 1)
+	local pal = new("Frame", {Name = "Palette", Size = UDim2.fromOffset(340, 0), AutomaticSize = Enum.AutomaticSize.Y, AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.new(0.5, 0, 0, 70), BackgroundColor3 = T.bg, ZIndex = 300, Visible = false, Parent = gui},
+		{corner(16), new("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}),
+			new("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})})
+	bind(pal, "BackgroundColor3", "bg")
+	bind(new("UIStroke", {Thickness = 1.5, Parent = pal}), "Color", "accent")
+	local box = new("TextBox", {Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = T.row, Text = "", PlaceholderText = "Digite: função, aba, tema, preset...", TextSize = 14,
+		ClearTextOnFocus = false, TextColor3 = T.text, PlaceholderColor3 = T.sub, ZIndex = 301, LayoutOrder = 0, Parent = pal}, {corner(10)})
+	regFont(box, false)
+	bind(box, "BackgroundColor3", "row"); bind(box, "TextColor3", "text"); bind(box, "PlaceholderColor3", "sub")
+
+	local resBtns, shownList, entries, sel = {}, {}, {}, 1
+	for i = 1, 7 do
+		local b = mkText({Size = UDim2.new(1, 0, 0, 30), Text = "", TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, ZIndex = 301, LayoutOrder = i, Visible = false, Parent = pal}, false, false, "TextButton")
+		b.BackgroundTransparency = 0
+		b.BackgroundColor3 = T.row
+		new("UICorner", {CornerRadius = UDim.new(0, 9), Parent = b})
+		resBtns[i] = b
+	end
+
+	local pageList = {"Farm", "Blox", "Auto", "Teleport", "Visual", "Player", "Info", "Estilo", "Painel", "Abas", "Botões", "Partículas", "Intro", "HUD", "Atalhos",
+		"Config", "Mapa", "Comandos", "Filtros", "Jogadores", "Servidores", "Webhook", "Frutas", "Monitor", "v16"}
+	local function buildEntries()
+		local list = {}
+		local function add(label, run) table.insert(list, {label = label, key = label:lower(), run = run}) end
+		for _, f in ipairs(G.Feats) do
+			add("Alternar: " .. f[1], function()
+				State[f[2]] = not State[f[2]]
+				if G.after[f[2]] then pcall(G.after[f[2]], State[f[2]]) end
+				syncAll()
+				notify(f[1], State[f[2]] and "Ligado" or "Desligado", 1.5)
+			end)
+		end
+		local all = {}
+		for _, p in ipairs(pageList) do all[p] = true end
+		for p in pairs(Z.pages) do all[p] = true end
+		for p in pairs(all) do
+			add("Abrir aba: " .. p, function() if not shown then showMain() end pcall(switchTab, p) end)
+		end
+		for _, n in ipairs(ThemeNames) do
+			add("Tema: " .. n, function() if n == "Custom" then updateCustom() end applyTheme(n) end)
+		end
+		for _, n in ipairs(PresetOrder) do add("Preset: " .. n, function() applyPreset(n) end) end
+		for _, n in ipairs(V.FNames) do add("Filtro: " .. n, function() V.applyFPreset(n) end) end
+		add("Ação: Trocar de servidor", function() G.serverHop() end)
+		add("Ação: Reentrar no servidor", function() TPS:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp) end)
+		add("Ação: Resetar personagem", function() local h = G.hum() if h then h.Health = 0 end end)
+		add("Ação: Salvar config", function() G.saveConfig() end)
+		add("Ação: Testar intro", function() G.playIntro() end)
+		add("Ação: Esconder painel", function() hideMain() end)
+		add("Ação: Mostrar painel", function() showMain() end)
+		add("Ação: Tema aleatório", function() if Z.randomTheme then Z.randomTheme() end end)
+		add("Ação: Copiar Job ID", function() pcall(function() setclipboard(game.JobId) end) notify("Copiado", "Job ID", 1.5) end)
+		add("Ação: Ir até a fruta", function()
+			local f = G.findFruit()
+			if f then State.ManualTravel = true; G.goTo(f.Handle.CFrame); State.ManualTravel = false else notify("Fruta", "Nenhuma no mapa", 2) end
+		end)
+		return list
+	end
+	local function render()
+		local words = {}
+		for w in box.Text:lower():gmatch("%S+") do table.insert(words, w) end
+		shownList = {}
+		for _, e in ipairs(entries) do
+			local ok = true
+			for _, w in ipairs(words) do if not e.key:find(w, 1, true) then ok = false break end end
+			if ok then
+				table.insert(shownList, e)
+				if #shownList >= 7 then break end
+			end
+		end
+		sel = math.clamp(sel, 1, math.max(#shownList, 1))
+		for i = 1, 7 do
+			local b, e = resBtns[i], shownList[i]
+			b.Visible = e ~= nil
+			if e then
+				b.Text = "  " .. e.label
+				b.BackgroundColor3 = (i == sel) and T.accent or T.row
+				b.TextColor3 = (i == sel) and white or T.text
+			end
+		end
+	end
+	local function close() pal.Visible = false end
+	local function run(i)
+		local e = shownList[i]
+		close()
+		if e then pcall(e.run) end
+	end
+	for i, b in ipairs(resBtns) do b.MouseButton1Click:Connect(function() run(i) end) end
+	box:GetPropertyChangedSignal("Text"):Connect(function() sel = 1; render() end)
+	box.FocusLost:Connect(function(enter)
+		if enter then run(sel) else
+			task.delay(0.4, function() if not box:IsFocused() then close() end end)
+		end
+	end)
+	Z.openPalette = function()
+		entries = buildEntries()
+		box.Text = ""
+		sel = 1
+		pal.Visible = true
+		render()
+		task.defer(function() pcall(function() box:CaptureFocus() end) end)
+	end
+	conn(UIS.InputBegan:Connect(function(i, gp)
+		if i.UserInputType ~= Enum.UserInputType.Keyboard then return end
+		if pal.Visible then
+			if i.KeyCode == Enum.KeyCode.Down then sel = math.min(sel + 1, #shownList); render()
+			elseif i.KeyCode == Enum.KeyCode.Up then sel = math.max(sel - 1, 1); render()
+			elseif i.KeyCode == Enum.KeyCode.Escape then close() end
+			return
+		end
+		if gp then return end
+		if i.KeyCode.Name == State.PaletteKey and (UIS:IsKeyDown(Enum.KeyCode.LeftControl) or UIS:IsKeyDown(Enum.KeyCode.RightControl)) then
+			Z.openPalette()
+		end
+	end))
+end)()
+
+------------------------------------------------------------------
+-- BLOCO C: perfis, agendador, furtivo, sniper
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Z) then return end
+	local Z, V = G.Z, G.V
+
+	-- perfis
+	local skip = {BlackScreen = true}
+	Z.saveProfile = function(name)
+		name = tostring(name or ""):match("^%s*(.-)%s*$")
+		if name == "" then notify("Perfil", "Digite um nome.", 2) return end
+		local p = {}
+		for _, f in ipairs(G.Feats) do if not skip[f[2]] then p[f[1]] = State[f[2]] and true or false end end
+		State.Profiles[name] = p
+		if Z.refreshProfiles then Z.refreshProfiles() end
+		notify("Perfil", "\"" .. name .. "\" salvo!", 2)
+	end
+	Z.applyProfile = function(name)
+		local p = State.Profiles[name]
+		if not p then return end
+		for _, f in ipairs(G.Feats) do
+			if not skip[f[2]] and p[f[1]] ~= nil then
+				local v = p[f[1]] == true
+				if State[f[2]] ~= v then
+					State[f[2]] = v
+					if G.after[f[2]] then pcall(G.after[f[2]], v) end
+				end
+			end
+		end
+		syncAll()
+		notify("Perfil", "Aplicado: " .. name, 2)
+	end
+
+	-- agendador
+	Z.sched, Z.schedLabels = {}, {}
+	Z.addSched = function()
+		local key = G.FeatMap[State.SchedPick]
+		if not key then return end
+		table.insert(Z.sched, {name = State.SchedPick, key = key, at = tick() + State.SchedMin * 60, act = State.SchedAct})
+		if Z.refreshSched then Z.refreshSched() end
+		notify("Agendador", State.SchedPick .. " → " .. State.SchedAct .. " em " .. State.SchedMin .. " min", 2.5)
+	end
+	G.loop(1, function()
+		local changed = false
+		for i = #Z.sched, 1, -1 do
+			local s = Z.sched[i]
+			if tick() >= s.at then
+				local v
+				if s.act == "Ligar" then v = true elseif s.act == "Desligar" then v = false else v = not State[s.key] end
+				State[s.key] = v
+				if G.after[s.key] then pcall(G.after[s.key], v) end
+				syncAll()
+				notify("Agendador", s.name .. (v and " ligado" or " desligado"), 3)
+				table.remove(Z.sched, i)
+				changed = true
+			end
+		end
+		if changed and Z.refreshSched then Z.refreshSched() end
+		for s, lb in pairs(Z.schedLabels) do
+			local left = math.max(0, math.floor(s.at - tick()))
+			pcall(function() lb.Text = s.name .. " → " .. s.act .. "  •  " .. string.format("%02d:%02d", math.floor(left / 60), left % 60) end)
+		end
+	end)
+
+	-- modo furtivo
+	local FARM = {"AutoLevel", "Farm", "AutoBoss", "AutoElite", "Chest", "FruitGrab"}
+	local fcache = {}
+	local trig, saved, savedSafe, lastHop = false, nil, nil, 0
+	local function isFriend(p)
+		if fcache[p.UserId] == nil then
+			fcache[p.UserId] = false
+			task.spawn(function()
+				local ok, r = pcall(function() return lp:IsFriendsWith(p.UserId) end)
+				fcache[p.UserId] = ok and r or false
+			end)
+		end
+		return fcache[p.UserId]
+	end
+	local function nearby()
+		local r = G.root()
+		if not r then return nil end
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= lp then
+				local hr = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+				if hr and (hr.Position - r.Position).Magnitude <= State.StealthRange then
+					if not (State.StealthFriends and isFriend(p)) then return p end
+				end
+			end
+		end
+	end
+	local function restore()
+		if saved then
+			for k in pairs(saved) do State[k] = true end
+			saved = nil
+			syncAll()
+		end
+		if savedSafe then
+			State.SafeMode, State.SafePct = savedSafe[1], savedSafe[2]
+			savedSafe = nil
+			syncAll()
+		end
+	end
+	G.loop(1, function()
+		if not State.StealthOn then
+			if trig then trig = false; restore() end
+			return
+		end
+		local p = nearby()
+		if p then
+			if not trig then
+				trig = true
+				notify("Furtivo", p.DisplayName .. " está por perto!", 3)
+				V.webhook("⚠ Jogador por perto", p.DisplayName .. " a menos de " .. State.StealthRange .. " st", 15158332)
+				local act = State.StealthAct
+				if act == "Pausar farm" then
+					saved = {}
+					for _, k in ipairs(FARM) do if State[k] then saved[k] = true; State[k] = false end end
+					syncAll()
+				elseif act == "Subir (seguro)" then
+					savedSafe = {State.SafeMode, State.SafePct}
+					State.SafeMode, State.SafePct = true, 101
+					syncAll()
+				end
+			end
+			if State.StealthAct == "Trocar servidor" and tick() - lastHop > 30 then lastHop = tick(); G.serverHop() end
+		elseif trig then
+			trig = false
+			notify("Furtivo", "Caminho livre.", 2)
+			restore()
+		end
+	end)
+
+	-- fruit sniper + reexecutar
+	local qot = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+	Z.hasQOT = qot ~= nil
+	Z.queueReexec = function()
+		if not State.ReExec or not qot or Z.reexecSrc == "" then return end
+		pcall(qot, 'loadstring(game:HttpGet("' .. Z.reexecSrc .. '"))()')
+	end
+	conn(lp.OnTeleport:Connect(function(st)
+		if st == Enum.TeleportState.Started then Z.queueReexec() end
+	end))
+	Z.sniperStatus = "desligado"
+	local noFruitSince, lastSnHop, grabbing = nil, 0, false
+	G.loop(1, function()
+		if not State.SniperOn then noFruitSince = nil; Z.sniperStatus = "desligado" return end
+		local f = G.findFruit()
+		if f then
+			noFruitSince = nil
+			Z.sniperStatus = "fruta encontrada: " .. f.Name
+			if State.SniperGrab and not grabbing then
+				grabbing = true
+				task.spawn(function()
+					State.ManualTravel = true
+					pcall(G.goTo, f.Handle.CFrame)
+					State.ManualTravel = false
+					task.wait(1)
+					grabbing = false
+				end)
+			end
+		else
+			noFruitSince = noFruitSince or tick()
+			local waited = tick() - noFruitSince
+			Z.sniperStatus = "sem fruta há " .. math.floor(waited) .. "s"
+			if State.SniperHop and waited >= State.SniperWait and tick() - lastSnHop > 25 then
+				lastSnHop = tick()
+				noFruitSince = nil
+				Z.sniperStatus = "trocando de servidor..."
+				G.serverHop()
+			end
+		end
+	end)
+end)()
+
+------------------------------------------------------------------
+-- BLOCO D: ferramentas (lógica)
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Z) then return end
+	local Z, V = G.Z, G.V
+	-- cronômetro e timer
+	local sw = {run = false, t0 = 0, acc = 0}
+	Z.swTime = function() return sw.acc + (sw.run and (tick() - sw.t0) or 0) end
+	Z.swToggle = function()
+		if sw.run then sw.acc = sw.acc + tick() - sw.t0; sw.run = false else sw.t0 = tick(); sw.run = true end
+	end
+	Z.swReset = function() sw.run = false; sw.acc = 0 end
+	local tm = {endAt = nil}
+	Z.timerStart = function(min)
+		tm.endAt = tick() + min * 60
+		notify("Timer", min .. " min iniciado", 2)
+	end
+	Z.timerCancel = function() tm.endAt = nil end
+	Z.timerLeft = function() return tm.endAt and math.max(0, tm.endAt - tick()) or nil end
+	G.loop(0.5, function()
+		if tm.endAt and tick() >= tm.endAt then
+			tm.endAt = nil
+			notify("⏰ Timer", "Acabou o tempo!", 6)
+			V.webhook("⏰ Timer", "Acabou o tempo!", 15844367)
+			pcall(function()
+				local s = Instance.new("Sound")
+				s.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+				s.Volume = 1
+				s.Parent = game:GetService("SoundService")
+				s:Play()
+				game:GetService("Debris"):AddItem(s, 3)
+			end)
+		end
+	end)
+	Z.fmtClock = function(s)
+		s = math.floor(s or 0)
+		return string.format("%02d:%02d:%02d", math.floor(s / 3600), math.floor(s % 3600 / 60), s % 60)
+	end
+
+	-- música
+	local snd = Instance.new("Sound")
+	snd.Name = "AppleHubMusic"
+	snd.Parent = game:GetService("SoundService")
+	Z.snd = snd
+	Z.musicStatus = "parado"
+	Z.musicPlay = function()
+		local id = tostring(State.MusicId):gsub("%D", "")
+		if id == "" then notify("Música", "Defina um ID de áudio.", 2) return end
+		snd.SoundId = "rbxassetid://" .. id
+		snd.Volume = State.MusicVol / 100
+		snd.Looped = State.MusicLoop
+		snd:Play()
+		task.spawn(function()
+			local t0 = tick()
+			while not snd.IsLoaded and tick() - t0 < 4 do task.wait(0.2) end
+			if not snd.IsLoaded then notify("Música", "Não carregou (ID inválido ou sem permissão).", 3) end
+		end)
+	end
+	Z.musicPause = function() if snd.IsPlaying then snd:Pause() else snd:Resume() end end
+	Z.musicStop = function() snd:Stop() end
+	G.loop(0.5, function()
+		snd.Volume = State.MusicVol / 100
+		snd.Looped = State.MusicLoop
+		Z.musicStatus = snd.IsPlaying and "tocando" or (snd.IsPaused and "pausado" or "parado")
+	end)
+
+	-- combo
+	local numMap = {["1"] = "One", ["2"] = "Two", ["3"] = "Three", ["4"] = "Four", ["5"] = "Five"}
+	local function pressK(k)
+		k = numMap[k] or k
+		local ok, kc = pcall(function() return Enum.KeyCode[k] end)
+		if not ok or not kc then return false end
+		pcall(function()
+			VIM:SendKeyEvent(true, kc, false, game)
+			task.wait(0.06)
+			VIM:SendKeyEvent(false, kc, false, game)
+		end)
+		return true
+	end
+	Z.runCombo = function()
+		for tok in tostring(State.ComboSeq):gmatch("[^,%s]+") do
+			if not alive then return end
+			pressK(tok:upper())
+			task.wait(math.max(State.ComboDelay, 50) / 1000)
+		end
+	end
+	task.spawn(function()
+		while alive do
+			task.wait(0.2)
+			if State.ComboLoop and not G.safeUp then Z.runCombo() end
+		end
+	end)
+
+	-- hora travada e câmera
+	G.loop(0.5, function() if State.LockClock then Lighting.ClockTime = State.ClockLockVal end end)
+	Z.applyCam = function()
+		pcall(function() lp.CameraMode = (State.CamMode == "Primeira pessoa") and Enum.CameraMode.LockFirstPerson or Enum.CameraMode.Classic end)
+	end
+
+	gui.Destroying:Connect(function()
+		pcall(function() snd:Destroy() end)
+		pcall(function() lp.CameraMode = Enum.CameraMode.Classic end)
+	end)
+end)()
+
+------------------------------------------------------------------
+-- BLOCO E: efeitos (toque mágico, fantasma, fundo, tema automático)
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Z) then return end
+	local Z = G.Z
+
+	-- toque mágico
+	local fxLayer = new("Frame", {Name = "TouchFX", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 500, Parent = gui})
+	local function fxColor(i)
+		local m = State.TouchColor
+		if m == "Arco-íris" then return Color3.fromHSV((tick() * 0.5 + i * 0.07) % 1, 0.65, 1)
+		elseif m == "Branco" then return Color3.new(1, 1, 1) end
+		return (i % 2 == 0) and T.accent or T.accent2
+	end
+	local function burst(pos)
+		if #fxLayer:GetChildren() > 100 then return end
+		local st, n = State.TouchStyle, State.TouchCount
+		if st == "Ondas" then
+			for k = 1, 2 do
+				local r = new("Frame", {Size = UDim2.fromOffset(10, 10), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(pos.X, pos.Y), BackgroundTransparency = 1, Parent = fxLayer},
+					{corner(500), new("UIStroke", {Color = fxColor(k), Thickness = 2.5})})
+				tween(r, 0.6 + k * 0.15, {Size = UDim2.fromOffset(90 * k, 90 * k)}, Enum.EasingStyle.Quad)
+				tween(r:FindFirstChildOfClass("UIStroke"), 0.6 + k * 0.15, {Transparency = 1}, Enum.EasingStyle.Quad)
+				task.delay(1.2, function() pcall(function() r:Destroy() end) end)
+			end
+			return
+		end
+		for i = 1, n do
+			local a, d = math.random() * math.pi * 2, 30 + math.random() * 55
+			local p, prop
+			if st == "Estrelas" or st == "Corações" then
+				p = new("TextLabel", {Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(pos.X, pos.Y), BackgroundTransparency = 1,
+					Text = (st == "Estrelas") and "✦" or "♥", TextSize = 10 + math.random() * 10, TextColor3 = fxColor(i), Font = Enum.Font.GothamBold, Parent = fxLayer})
+				prop = "TextTransparency"
+			elseif st == "Confete" then
+				p = new("Frame", {Size = UDim2.fromOffset(6, 3), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(pos.X, pos.Y), BackgroundColor3 = fxColor(i), BorderSizePixel = 0, Rotation = math.random(360), Parent = fxLayer})
+				prop = "BackgroundTransparency"
+			else
+				local s = 4 + math.random() * 5
+				p = new("Frame", {Size = UDim2.fromOffset(s, s), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(pos.X, pos.Y), BackgroundColor3 = fxColor(i), BorderSizePixel = 0, Parent = fxLayer}, {corner(5)})
+				prop = "BackgroundTransparency"
+			end
+			local tx, ty = pos.X + math.cos(a) * d, pos.Y + math.sin(a) * d
+			if st == "Corações" then tx = pos.X + (math.random() - 0.5) * 50; ty = pos.Y - 40 - math.random() * 60 end
+			tween(p, 0.8, {Position = UDim2.fromOffset(tx, ty), [prop] = 1}, Enum.EasingStyle.Quad)
+			task.delay(0.9, function() pcall(function() p:Destroy() end) end)
+		end
+	end
+	Z.testFX = function() burst(Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)) end
+	conn(UIS.InputBegan:Connect(function(i)
+		if not State.TouchFX then return end
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			local inset = GuiService:GetGuiInset()
+			burst(Vector2.new(i.Position.X + inset.X, i.Position.Y + inset.Y))
+		end
+	end))
+
+	-- modo fantasma
+	local lastIn = tick()
+	local function poke() lastIn = tick() end
+	main.InputBegan:Connect(poke)
+	main.InputChanged:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch then poke() end
+	end)
+	G.loop(0.3, function()
+		if not State.GhostOn then return end
+		if not shown or main.GroupTransparency >= 0.99 then return end
+		local target = (tick() - lastIn > State.GhostAfter) and State.GhostLevel / 100 or 0
+		if math.abs(main.GroupTransparency - target) > 0.03 then tween(main, 0.45, {GroupTransparency = target}, Enum.EasingStyle.Quad) end
+	end)
+	G.after.GhostOn = function(v)
+		if not v then
+			poke()
+			if shown and main.GroupTransparency < 0.99 then tween(main, 0.3, {GroupTransparency = 0}) end
+		end
+	end
+
+	-- imagem de fundo
+	local bg = new("ImageLabel", {Name = "BgImage", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 0, Visible = false, Parent = main})
+	Z.applyBg = function()
+		local id = tostring(State.BgImage):gsub("%D", "")
+		bg.Visible = id ~= ""
+		bg.Image = id ~= "" and ("rbxassetid://" .. id) or ""
+		bg.ImageTransparency = 1 - State.BgAlpha / 100
+		bg.ScaleType = State.BgScale == "Fit" and Enum.ScaleType.Fit or (State.BgScale == "Stretch" and Enum.ScaleType.Stretch or Enum.ScaleType.Crop)
+	end
+
+	-- tema automático
+	Z.randomTheme = function()
+		local names = {}
+		for _, n in ipairs(ThemeNames) do if n ~= "Custom" and n ~= State.Theme then table.insert(names, n) end end
+		local n = names[math.random(#names)]
+		applyTheme(n)
+		notify("Tema", n, 1.5)
+	end
+	local lastAT = tick()
+	G.loop(5, function()
+		if State.AutoTheme and tick() - lastAT >= State.AutoThemeMin * 60 then lastAT = tick(); Z.randomTheme() end
+	end)
+end)()
+
+------------------------------------------------------------------
+-- BLOCO F: ESP+
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Z) then return end
+	local espFolder = new("Folder", {Name = "ESPPlus", Parent = gui})
+	local objs, lines = {}, {}
+	local hasDraw = false
+	pcall(function() hasDraw = Drawing ~= nil and Drawing.new ~= nil end)
+	local warned = false
+
+	local function colorFor(ratio, idx)
+		local m = State.EspColor
+		if m == "Tema" then return T.accent
+		elseif m == "Arco-íris" then return Color3.fromHSV((tick() * 0.2 + idx * 0.1) % 1, 0.7, 1)
+		elseif m == "Por vida" then return Color3.fromRGB(255, 60, 60):Lerp(Color3.fromRGB(70, 255, 110), ratio) end
+		return Color3.fromRGB(255, 85, 85)
+	end
+	local function make(p)
+		local bb = new("BillboardGui", {Size = UDim2.fromOffset(180, 46), AlwaysOnTop = true, StudsOffset = Vector3.new(0, 3.4, 0), Parent = espFolder})
+		local nm = new("TextLabel", {Size = UDim2.new(1, 0, 0, 16), BackgroundTransparency = 1, TextStrokeTransparency = 0.4, Font = Enum.Font.GothamBold, Parent = bb})
+		local bar = new("Frame", {Size = UDim2.new(0.7, 0, 0, 5), Position = UDim2.new(0.15, 0, 0, 19), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4, BorderSizePixel = 0, Parent = bb}, {corner(3)})
+		local fill = new("Frame", {Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, Parent = bar}, {corner(3)})
+		local ds = new("TextLabel", {Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 27), BackgroundTransparency = 1, TextStrokeTransparency = 0.5, Font = Enum.Font.Gotham, Parent = bb})
+		local o = {bb = bb, nm = nm, bar = bar, fill = fill, ds = ds}
+		objs[p] = o
+		return o
+	end
+	local function drop(p)
+		local o = objs[p]
+		if o then
+			pcall(function() o.bb:Destroy() end)
+			pcall(function() if o.hl then o.hl:Destroy() end end)
+			objs[p] = nil
+		end
+	end
+	G.loop(0.15, function()
+		if not State.EspOn then
+			for p in pairs(objs) do drop(p) end
+			return
+		end
+		if State.EspTracer and not hasDraw and not warned then
+			warned = true
+			notify("ESP+", "Seu executor não tem Drawing: tracers indisponíveis.", 3)
+		end
+		local r = G.root()
+		if not r then return end
+		local cand = {}
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= lp then
+				local c = p.Character
+				local hr = c and c:FindFirstChild("HumanoidRootPart")
+				local h = c and c:FindFirstChildOfClass("Humanoid")
+				if hr and h then
+					local d = (hr.Position - r.Position).Magnitude
+					if d <= State.EspDist then table.insert(cand, {p = p, hr = hr, h = h, d = d}) end
+				end
+			end
+		end
+		table.sort(cand, function(a, b) return a.d < b.d end)
+		local keep = {}
+		for i = 1, math.min(#cand, State.EspMax) do
+			local e = cand[i]
+			keep[e.p] = true
+			local o = objs[e.p] or make(e.p)
+			local ratio = math.clamp(e.h.Health / math.max(e.h.MaxHealth, 1), 0, 1)
+			local col = colorFor(ratio, i)
+			o.hr, o.col = e.hr, col
+			o.bb.Adornee = e.hr
+			local lv = ""
+			if State.EspLv then pcall(function() lv = "  [Lv " .. e.p.Data.Level.Value .. "]" end) end
+			o.nm.Text = e.p.DisplayName .. lv
+			o.nm.TextSize = State.EspSize
+			o.nm.TextColor3 = col
+			o.ds.Text = math.floor(e.d) .. " st  •  " .. math.floor(e.h.Health) .. " HP"
+			o.ds.TextSize = math.max(State.EspSize - 2, 8)
+			o.ds.TextColor3 = Color3.fromRGB(225, 225, 235)
+			o.bar.Visible = State.EspHP
+			o.fill.Size = UDim2.fromScale(ratio, 1)
+			o.fill.BackgroundColor3 = Color3.fromRGB(255, 60, 60):Lerp(Color3.fromRGB(70, 255, 110), ratio)
+			if State.EspBox then
+				if not o.hl then o.hl = new("Highlight", {FillTransparency = 0.85, OutlineTransparency = 0, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Parent = espFolder}) end
+				o.hl.Adornee = e.p.Character
+				o.hl.FillColor, o.hl.OutlineColor = col, col
+			elseif o.hl then
+				pcall(function() o.hl:Destroy() end)
+				o.hl = nil
+			end
+		end
+		for p in pairs(objs) do if not keep[p] then drop(p) end end
+	end)
+	conn(RS.RenderStepped:Connect(function()
+		if not State.EspOn or not State.EspTracer or not hasDraw then
+			for _, ln in pairs(lines) do pcall(function() ln.Visible = false end) end
+			return
+		end
+		local vp = cam.ViewportSize
+		for p, o in pairs(objs) do
+			local ln = lines[p]
+			if not ln then
+				local ok, l = pcall(function()
+					local x = Drawing.new("Line")
+					x.Thickness = 1.5
+					x.Transparency = 1
+					return x
+				end)
+				if ok then ln = l; lines[p] = l end
+			end
+			if ln and o.hr then
+				local pt, on = cam:WorldToViewportPoint(o.hr.Position)
+				ln.Visible = on
+				if on then
+					ln.From = Vector2.new(vp.X / 2, vp.Y)
+					ln.To = Vector2.new(pt.X, pt.Y)
+					ln.Color = o.col or Color3.fromRGB(255, 85, 85)
+				end
+			end
+		end
+		for p, ln in pairs(lines) do
+			if not objs[p] then
+				pcall(function() ln:Remove() end)
+				lines[p] = nil
+			end
+		end
+	end))
+	gui.Destroying:Connect(function()
+		for _, ln in pairs(lines) do pcall(function() ln:Remove() end) end
+	end)
+end)()
+
+------------------------------------------------------------------
+-- BLOCO G: páginas novas
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Z) then return end
+	local Z, V = G.Z, G.V
+	local commas = G.commas
+
+	local function newPage(name, icon)
+		Z.pages[name] = true
+		return addPage(name, icon)
+	end
+	local function listBox(page)
+		local b = new("Frame", {Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = page},
+			{new("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})})
+		regSearch(b, "", true)
+		return b
+	end
+	local function clearBox(box) for _, c in ipairs(box:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end end
+	local function sb(parent, txt, x, w, color)
+		local b = mkText({Size = UDim2.fromOffset(w, 26), Position = UDim2.new(1, x, 0.5, -13), Text = txt, TextSize = 12, AutoButtonColor = false, Parent = parent}, true, false, "TextButton")
+		b.BackgroundTransparency = 0
+		b.BackgroundColor3 = color
+		b.TextColor3 = Color3.new(1, 1, 1)
+		new("UICorner", {CornerRadius = UDim.new(0, 8), Parent = b})
+		return b
+	end
+
+	------------------------------------------------ AUTOMAÇÃO
+	local pAu = newPage("Automação", "⚡")
+	Section(pAu, "Paleta de comandos")
+	Button(pAu, "Abrir paleta (Ctrl + tecla)", function() Z.openPalette() end)
+	Input(pAu, "Tecla da paleta (com Ctrl)", "ex: K e Enter", function(t)
+		local k = t:gsub("%s", ""):upper()
+		local ok, kc = pcall(function() return Enum.KeyCode[k] end)
+		if ok and kc then State.PaletteKey = k; notify("Paleta", "Ctrl + " .. k, 2) else notify("Paleta", "Tecla inválida.", 2) end
+	end)
+	Section(pAu, "Modo furtivo (jogador por perto)")
+	Toggle(pAu, "Ativar modo furtivo", "StealthOn")
+	Slider(pAu, "Distância de alerta", 30, 500, "StealthRange", nil, " st")
+	Dropdown(pAu, "Ao detectar", {"Pausar farm", "Subir (seguro)", "Trocar servidor", "Só avisar"}, "StealthAct")
+	Toggle(pAu, "Ignorar amigos", "StealthFriends")
+	Section(pAu, "Fruit Sniper")
+	Toggle(pAu, "Ativar Fruit Sniper", "SniperOn")
+	Toggle(pAu, "Ir pegar a fruta automaticamente", "SniperGrab")
+	Toggle(pAu, "Trocar de servidor se não tiver fruta", "SniperHop")
+	Slider(pAu, "Esperar antes de trocar", 5, 90, "SniperWait", nil, " s")
+	local snLabel = Label(pAu, "Status: desligado")
+	G.loop(1, function() snLabel.Text = "Status: " .. Z.sniperStatus end)
+	Section(pAu, "Reexecutar após trocar de servidor")
+	Label(pAu, "Cole abaixo o link RAW do seu script completo (as 4 partes juntas, hospedado no GitHub/Pastebin). O hub volta sozinho depois de cada troca. Ative também o Auto-save na aba v16.")
+	Toggle(pAu, "Reexecutar automaticamente", "ReExec")
+	Input(pAu, "Link RAW do script", "cole e Enter", function(u) Z.setURL(u); notify("Reexecutar", "Link salvo.", 2) end)
+	Label(pAu, Z.hasQOT and "Seu executor suporta reexecução." or "Seu executor NÃO suporta queue_on_teleport.")
+	Section(pAu, "Agendador")
+	Dropdown(pAu, "Função", G.FeatNames, "SchedPick")
+	Dropdown(pAu, "Ação", {"Ligar", "Desligar", "Alternar"}, "SchedAct")
+	Slider(pAu, "Daqui a", 1, 180, "SchedMin", nil, " min")
+	Button(pAu, "Agendar", function() Z.addSched() end)
+	local schedBox = listBox(pAu)
+	Z.refreshSched = function()
+		clearBox(schedBox)
+		table.clear(Z.schedLabels)
+		for i, s in ipairs(Z.sched) do
+			local r = row(schedBox, 38)
+			r.LayoutOrder = i
+			local lb = mkText({Size = UDim2.new(1, -60, 1, 0), Position = UDim2.fromOffset(12, 0), Text = s.name, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r}, true)
+			Z.schedLabels[s] = lb
+			sb(r, "✕", -44, 34, Color3.fromRGB(220, 70, 70)).MouseButton1Click:Connect(function()
+				for k, v in ipairs(Z.sched) do if v == s then table.remove(Z.sched, k) break end end
+				Z.refreshSched()
+			end)
+		end
+	end
+	Section(pAu, "Perfis de funções")
+	Label(pAu, "Salva quais funções estão ligadas agora. Digite o nome e dê Enter.")
+	Input(pAu, "Salvar perfil", "nome e Enter", function(t) Z.saveProfile(t) end)
+	local profBox = listBox(pAu)
+	Z.refreshProfiles = function()
+		clearBox(profBox)
+		local names = {}
+		for n in pairs(State.Profiles) do table.insert(names, n) end
+		table.sort(names)
+		for i, n in ipairs(names) do
+			local r = row(profBox, 40)
+			r.LayoutOrder = i
+			mkText({Size = UDim2.new(1, -130, 1, 0), Position = UDim2.fromOffset(12, 0), Text = n, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r}, true)
+			sb(r, "Aplicar", -116, 64, T.accent).MouseButton1Click:Connect(function() Z.applyProfile(n) end)
+			sb(r, "✕", -44, 34, Color3.fromRGB(220, 70, 70)).MouseButton1Click:Connect(function() State.Profiles[n] = nil; Z.refreshProfiles() end)
+		end
+	end
+	Z.refreshProfiles()
+
+	------------------------------------------------ FERRAMENTAS
+	local pTl = newPage("Ferramentas", "⚒")
+	Section(pTl, "Cronômetro")
+	InfoRow(pTl, "Cronômetro", function() return Z.fmtClock(Z.swTime()) end)
+	Button(pTl, "Iniciar / pausar", function() Z.swToggle() end)
+	Button(pTl, "Zerar", function() Z.swReset() end)
+	Section(pTl, "Timer")
+	Input(pTl, "Minutos", "ex: 5 e Enter", function(t)
+		local n = tonumber(t)
+		if n and n > 0 then Z.timerStart(n) else notify("Timer", "Número inválido.", 2) end
+	end)
+	InfoRow(pTl, "Restante", function() local l = Z.timerLeft() return l and Z.fmtClock(l) or "—" end)
+	Button(pTl, "Cancelar timer", function() Z.timerCancel() end)
+	Section(pTl, "Bloco de notas")
+	local nr = row(pTl, 150)
+	regSearch(nr, "bloco de notas")
+	local nb = mkText({Size = UDim2.new(1, -20, 1, -20), Position = UDim2.fromOffset(10, 10), Text = State.Notes, PlaceholderText = "Escreva aqui... (salva ao sair do campo)",
+		TextSize = 13, MultiLine = true, TextWrapped = true, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top}, false, "text", "TextBox")
+	nb.Parent = nr
+	nb.FocusLost:Connect(function() State.Notes = nb.Text end)
+	Label(pTl, "As notas vão junto com \"Salvar config\" ou com o Auto-save.")
+	Section(pTl, "Player de música")
+	Input(pTl, "ID do áudio", "só números e Enter", function(t) State.MusicId = t; notify("Música", "ID definido.", 1.5) end)
+	Button(pTl, "▶ Tocar", function() Z.musicPlay() end)
+	Button(pTl, "⏯ Pausar / continuar", function() Z.musicPause() end)
+	Button(pTl, "■ Parar", function() Z.musicStop() end)
+	Slider(pTl, "Volume", 0, 100, "MusicVol", nil, "%")
+	Toggle(pTl, "Repetir", "MusicLoop")
+	InfoRow(pTl, "Estado", function() return Z.musicStatus end)
+	Section(pTl, "Combo de teclas")
+	Label(pTl, "Sequência separada por vírgula. Ex: 1,Z,X,2,C,V (números 1 a 5 trocam de item).")
+	Input(pTl, "Sequência", "ex: Z,X,C e Enter", function(t) State.ComboSeq = t; notify("Combo", t, 2) end)
+	InfoRow(pTl, "Atual", function() return State.ComboSeq end)
+	Slider(pTl, "Intervalo entre teclas", 50, 2000, "ComboDelay", nil, " ms")
+	Button(pTl, "Executar combo agora", function() task.spawn(Z.runCombo) end)
+	Toggle(pTl, "Repetir combo sem parar", "ComboLoop")
+	Section(pTl, "Ambiente e câmera")
+	Toggle(pTl, "Travar hora do dia", "LockClock")
+	Slider(pTl, "Hora travada", 0, 24, "ClockLockVal", nil, "h")
+	Dropdown(pTl, "Modo da câmera", {"Normal", "Primeira pessoa"}, "CamMode", function() Z.applyCam() end)
+
+	------------------------------------------------ ESP+
+	local pEs = newPage("ESP+", "◈")
+	Section(pEs, "ESP avançado de jogadores")
+	Toggle(pEs, "Ativar ESP+", "EspOn")
+	Slider(pEs, "Distância máxima", 100, 5000, "EspDist", nil, " st")
+	Slider(pEs, "Máximo de jogadores", 5, 30, "EspMax")
+	Slider(pEs, "Tamanho do texto", 9, 20, "EspSize")
+	Toggle(pEs, "Barra de vida", "EspHP")
+	Toggle(pEs, "Mostrar level", "EspLv")
+	Toggle(pEs, "Contorno no personagem", "EspBox")
+	Toggle(pEs, "Tracers (linhas, precisa de Drawing)", "EspTracer")
+	Dropdown(pEs, "Cor", {"Vermelho", "Tema", "Arco-íris", "Por vida"}, "EspColor")
+
+	------------------------------------------------ EFEITOS
+	local pFx2 = newPage("Efeitos", "✺")
+	Section(pFx2, "Toque mágico")
+	Toggle(pFx2, "Efeito ao tocar/clicar", "TouchFX")
+	Dropdown(pFx2, "Estilo", {"Faíscas", "Ondas", "Estrelas", "Corações", "Confete"}, "TouchStyle")
+	Dropdown(pFx2, "Cor", {"Tema", "Arco-íris", "Branco"}, "TouchColor")
+	Slider(pFx2, "Quantidade", 4, 30, "TouchCount")
+	Button(pFx2, "Testar efeito", function() Z.testFX() end)
+	Section(pFx2, "Modo fantasma")
+	Toggle(pFx2, "Painel fica transparente quando parado", "GhostOn")
+	Slider(pFx2, "Esperar", 2, 30, "GhostAfter", nil, " s")
+	Slider(pFx2, "Transparência", 20, 90, "GhostLevel", nil, "%")
+	Section(pFx2, "Imagem de fundo do painel")
+	Label(pFx2, "Use o ID de uma imagem do Roblox (só números).")
+	Input(pFx2, "ID da imagem", "só números e Enter", function(t) State.BgImage = t; Z.applyBg() end)
+	Slider(pFx2, "Opacidade da imagem", 5, 100, "BgAlpha", function() Z.applyBg() end, "%")
+	Dropdown(pFx2, "Ajuste", {"Crop", "Fit", "Stretch"}, "BgScale", function() Z.applyBg() end)
+	Button(pFx2, "Remover imagem", function() State.BgImage = ""; Z.applyBg() end)
+	Section(pFx2, "Tema")
+	Button(pFx2, "Tema aleatório", function() Z.randomTheme() end)
+	Toggle(pFx2, "Trocar tema sozinho", "AutoTheme")
+	Slider(pFx2, "A cada", 1, 60, "AutoThemeMin", nil, " min")
+	Section(pFx2, "Temas extras do v26")
+	local g = Grid(pFx2, 134, 58)
+	for _, name in ipairs(Z.extraNames) do
+		local tt = Themes[name]
+		local b = new("TextButton", {BackgroundColor3 = tt.bg, Text = "", AutoButtonColor = false, Parent = g}, {rc(12)})
+		new("Frame", {Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = Color3.new(1, 1, 1), Parent = b},
+			{corner(6), new("UIGradient", {Color = ColorSequence.new(tt.accent, tt.accent2)})})
+		new("Frame", {Size = UDim2.new(1, -12, 0, 8), Position = UDim2.fromOffset(6, 27), BackgroundColor3 = tt.row, Parent = b}, {corner(4)})
+		new("TextLabel", {Size = UDim2.new(1, 0, 0, 16), Position = UDim2.fromOffset(0, 38), BackgroundTransparency = 1, Text = name, Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = tt.text, Parent = b})
+		local st = new("UIStroke", {Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Enabled = (State.Theme == name), Parent = b})
+		bind(st, "Color", "accent")
+		themeStrokes[name] = st
+		b.MouseButton1Click:Connect(function() uiSound(); applyTheme(name) end)
+	end
+
+	------------------------------------------------ STATS
+	local pSt = newPage("Stats", "▦")
+	Section(pSt, "Gráficos da sessão")
+	local N = 40
+	local function spark(page, title)
+		local r = row(page, 86)
+		regSearch(r, title)
+		local tl = mkText({Size = UDim2.new(1, -24, 0, 20), Position = UDim2.fromOffset(12, 4), Text = title, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = r}, true)
+		local box = new("Frame", {Size = UDim2.new(1, -24, 0, 48), Position = UDim2.fromOffset(12, 30), BackgroundTransparency = 1, Parent = r})
+		local bars = {}
+		for i = 1, N do
+			local b = new("Frame", {Size = UDim2.new(1 / N, -1, 0, 2), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new((i - 1) / N, 0, 1, 0), BorderSizePixel = 0, BackgroundColor3 = T.accent, Parent = box}, {corner(2)})
+			bind(b, "BackgroundColor3", "accent")
+			bars[i] = b
+		end
+		return {tl = tl, bars = bars, name = title, hist = {}}
+	end
+	local function feed(sp, val, label)
+		table.insert(sp.hist, math.max(val, 0))
+		if #sp.hist > N then table.remove(sp.hist, 1) end
+		local mx = 1
+		for _, v in ipairs(sp.hist) do if v > mx then mx = v end end
+		for i, b in ipairs(sp.bars) do
+			local v = sp.hist[#sp.hist - N + i]
+			b.Size = UDim2.new(1 / N, -1, 0, v and math.max(2, math.floor(v / mx * 48)) or 2)
+		end
+		sp.tl.Text = sp.name .. "  •  " .. label
+	end
+	local spBeli = spark(pSt, "Beli ganho (acumulado, a cada 30 s)")
+	local spLv = spark(pSt, "Levels ganhos (acumulado, a cada 30 s)")
+	local st = {sum = 0, n = 0, min = 9999, pSum = 0, pMax = 0, best = 0}
+	G.loop(30, function()
+		feed(spBeli, G.gain("Beli"), commas(G.gain("Beli")))
+		feed(spLv, G.gain("Level"), commas(G.gain("Level")))
+	end)
+	G.loop(1, function()
+		if fps > 0 then
+			st.sum = st.sum + fps
+			st.n = st.n + 1
+			if fps < st.min then st.min = fps end
+		end
+		local p = getPing()
+		st.pSum = st.pSum + p
+		if p > st.pMax then st.pMax = p end
+		local r = V.rateNum("Beli")
+		if r > st.best then st.best = r end
+	end)
+	Section(pSt, "Médias")
+	InfoRow(pSt, "FPS médio", function() return st.n > 0 and tostring(math.floor(st.sum / st.n)) or "—" end)
+	InfoRow(pSt, "FPS mínimo", function() return st.n > 0 and tostring(st.min) or "—" end)
+	InfoRow(pSt, "Ping médio", function() return st.n > 0 and (math.floor(st.pSum / st.n) .. " ms") or "—" end)
+	InfoRow(pSt, "Maior ping", function() return st.pMax .. " ms" end)
+	InfoRow(pSt, "Melhor Beli/h", function() return commas(st.best) end)
+	InfoRow(pSt, "Memória do jogo", function() return math.floor(Stats:GetTotalMemoryUsageMb()) .. " MB" end)
+	Button(pSt, "Resetar sessão (zera ganhos e médias)", function()
+		G.base = {}
+		startTick = tick()
+		st.sum, st.n, st.min, st.pSum, st.pMax, st.best = 0, 0, 9999, 0, 0, 0
+		spBeli.hist, spLv.hist = {}, {}
+		notify("Stats", "Sessão reiniciada.", 2)
+	end)
+
+	------------------------------------------------ comandos novos no console
+	local oldRun = V.run
+	V.run = function(text)
+		local cmd, rest = tostring(text):match("^%s*(%S+)%s*(.*)$")
+		if not cmd then return end
+		local c, say = cmd:lower(), V.say
+		local mine = {palette = true, profile = true, saveprofile = true, music = true, stopmusic = true, timer = true, stopwatch = true}
+		if not mine[c] then return oldRun(text) end
+		say("> " .. text)
+		if c == "palette" then Z.openPalette()
+		elseif c == "profile" then
+			if State.Profiles[rest] then Z.applyProfile(rest); say("perfil " .. rest) else say("perfil não existe") end
+		elseif c == "saveprofile" then Z.saveProfile(rest); say("perfil salvo")
+		elseif c == "music" then State.MusicId = rest; Z.musicPlay(); say("tocando " .. rest)
+		elseif c == "stopmusic" then Z.musicStop(); say("música parada")
+		elseif c == "timer" then
+			local n = tonumber(rest)
+			if n then Z.timerStart(n); say("timer " .. n .. " min") else say("uso: timer 5") end
+		elseif c == "stopwatch" then Z.swToggle(); say("cronômetro: " .. Z.fmtClock(Z.swTime()))
+		end
+	end
+
+	-- aplicar tudo ao abrir
+	Z.applyCam()
+	Z.applyBg()
+	layoutTabs()
+	notify("Apple Hub v26", "Novo: Paleta (Ctrl+K), Furtivo, Sniper, ESP+, Efeitos...", 4)
 end)()
