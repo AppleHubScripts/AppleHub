@@ -4548,3 +4548,742 @@ end)()
 	layoutTabs()
 	notify("Apple Hub v26", "Novo: Paleta (Ctrl+K), Furtivo, Sniper, ESP+, Efeitos...", 4)
 end)()
+-- ===== APPLE HUB v30 — PARTE 5 (cole depois das Partes 1, 2 [v9], 3 [v16] e 4 [v26]) =====
+
+------------------------------------------------------------------
+-- BLOCO A: estado, compacto, editor de tema, título animado
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Z and G.Z.openPalette and addPage) then warn("[AppleHub v30] Cole esta parte DEPOIS das Partes 1 e 2 (v9), 3 (v16) e 4 (v26).") return end
+	local Y = {pages = {}, progress = {}}
+	G.Y = Y
+	local NEW = {
+		StartTab = "Início", Compact = false, PrevSide = 128, TitleAnim = "Nenhuma",
+		TargetHud = false, THScale = 100, THAlpha = 35,
+		GoalOn = false, GoalBeli = 1000000, GoalKills = 500,
+		ChatLog = false, ChatKeys = "fruit,leopard,trade", ChatAlert = true, ChatMine = true,
+		SoundAlert = false, SoundFruit = true, SoundBoss = true, AlertVol = 60,
+		MacroLoop = false, MacroSpeed = 100, Macro = {},
+		AutoPerf = false, PerfMin = 25,
+		PanicKey = "End", PanicOff = true, PanicUnload = false, PanicBtn = true,
+		SnakeHi = 0, CustomHex = {},
+	}
+	for k, v in pairs(NEW) do
+		State[k] = v
+		Default[k] = type(v) == "table" and {} or v
+		table.insert(SAVE_KEYS, k)
+	end
+	pcall(function()
+		if isfile and isfile(CFG_FILE) then
+			local d = HttpService:JSONDecode(readfile(CFG_FILE))
+			for k, v in pairs(NEW) do
+				if d[k] ~= nil and type(d[k]) == type(v) then State[k] = d[k] end
+			end
+		end
+	end)
+	local tt = tostring(State.Title)
+	if State.Title == Default.Title or tt:find("v26", 1, true) or tt:find("v16", 1, true) then
+		State.Title = "Apple Hub v30  •  Blox Fruits"
+		titleLabel.Text = State.Title
+	end
+
+	local extra = {{"Target HUD", "TargetHud"}, {"Alerta Sonoro", "SoundAlert"}, {"Auto Performance", "AutoPerf"}, {"Chat Log", "ChatLog"},
+		{"Modo Compacto", "Compact"}, {"Macro Loop", "MacroLoop"}, {"Metas", "GoalOn"}}
+	for _, f in ipairs(extra) do
+		table.insert(G.Feats, f)
+		table.insert(G.FeatNames, f[1])
+		G.FeatMap[f[1]] = f[2]
+	end
+
+	-- modo compacto (só ícones)
+	local oldLayout = layoutTabs
+	layoutTabs = function()
+		oldLayout()
+		if State.Compact and State.TabIcons then
+			for _, b in ipairs(tabHolder:GetChildren()) do
+				if b:IsA("TextButton") then b.Text = b.Text:match("^(%S+)") or b.Text end
+			end
+		end
+	end
+	Y.applyCompact = function()
+		if State.Compact then
+			if State.SideW > 70 then State.PrevSide = State.SideW end
+			State.SideW, State.TabAlign = 56, "Centro"
+		else
+			State.SideW, State.TabAlign = math.max(State.PrevSide, 90), "Esquerda"
+		end
+		applyAppearance(); syncAll()
+	end
+	G.after.Compact = function() Y.applyCompact() end
+
+	-- tema custom por hex
+	Y.applyCustomHex = function()
+		for k, hex in pairs(State.CustomHex) do pcall(function() Themes.Custom[k] = Color3.fromHex(hex) end) end
+	end
+	local oldCustom = updateCustom
+	updateCustom = function() oldCustom(); Y.applyCustomHex() end
+	Y.applyCustomHex()
+	if State.Theme == "Custom" then pcall(applyTheme, "Custom") end
+
+	-- título animado
+	G.loop(0.05, function()
+		local m = State.TitleAnim
+		if m == "Arco-íris" then titleLabel.TextColor3 = Color3.fromHSV((tick() * 0.15) % 1, 0.55, 1)
+		elseif m == "Pulso" then titleLabel.TextColor3 = T.sub:Lerp(T.accent, 0.5 + 0.5 * math.sin(tick() * 3)) end
+	end)
+end)()
+
+------------------------------------------------------------------
+-- BLOCO B: Target HUD + kills
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Y) then return end
+	local Y = G.Y
+	Y.kills = 0
+	local th = new("Frame", {Name = "TargetHUD", Size = UDim2.fromOffset(190, 0), AutomaticSize = Enum.AutomaticSize.Y, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 28),
+		BackgroundColor3 = T.bg, BackgroundTransparency = State.THAlpha / 100, ZIndex = 32, Visible = false, Parent = gui},
+		{corner(12), new("UIPadding", {PaddingTop = UDim.new(0, 7), PaddingBottom = UDim.new(0, 7), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)}),
+			new("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder})})
+	bind(th, "BackgroundColor3", "bg")
+	bind(new("UIStroke", {Thickness = 1, Transparency = 0.75, Parent = th}), "Color", "accent")
+	local ths = new("UIScale", {Scale = State.THScale / 100, Parent = th})
+	local nm = mkText({Size = UDim2.new(1, 0, 0, 16), Text = "", TextSize = 13, ZIndex = 33, LayoutOrder = 1, Parent = th}, true)
+	local barBG = new("Frame", {Size = UDim2.new(1, 0, 0, 8), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 33, LayoutOrder = 2, Parent = th}, {corner(4)})
+	local fill = new("Frame", {Size = UDim2.fromScale(1, 1), BorderSizePixel = 0, ZIndex = 34, Parent = barBG}, {corner(4)})
+	local info = mkText({Size = UDim2.new(1, 0, 0, 14), Text = "", TextSize = 11, ZIndex = 33, LayoutOrder = 3, Parent = th}, false, "sub")
+	drag(th, th)
+	Y.applyTH = function()
+		th.BackgroundTransparency = State.THAlpha / 100
+		ths.Scale = State.THScale / 100
+	end
+	local cur, curHum
+	G.loop(0.15, function()
+		if not (State.TargetHud or G.anyAuto()) then
+			th.Visible = false
+			cur, curHum = nil, nil
+			return
+		end
+		if cur and curHum and (curHum.Health <= 0 or not cur.Parent) then
+			if curHum.Health <= 0 then Y.kills = Y.kills + 1 end
+			cur, curHum = nil, nil
+		end
+		local mr = G.nearestMob()
+		local mdl = mr and mr.Parent
+		local h = mdl and mdl:FindFirstChildOfClass("Humanoid")
+		if mdl and h then cur, curHum = mdl, h end
+		if State.TargetHud and mdl and h then
+			th.Visible = true
+			local ratio = math.clamp(h.Health / math.max(h.MaxHealth, 1), 0, 1)
+			nm.Text = mdl.Name .. (G.BossSet[mdl.Name] and "  [BOSS]" or "")
+			fill.Size = UDim2.fromScale(ratio, 1)
+			fill.BackgroundColor3 = Color3.fromRGB(255, 60, 60):Lerp(Color3.fromRGB(70, 255, 110), ratio)
+			local r = G.root()
+			info.Text = math.floor(h.Health) .. " / " .. math.floor(h.MaxHealth) .. (r and ("  •  " .. math.floor((mr.Position - r.Position).Magnitude) .. " st") or "")
+		else
+			th.Visible = false
+		end
+	end)
+end)()
+
+------------------------------------------------------------------
+-- BLOCO C: metas, alertas sonoros, total geral
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Y) then return end
+	local Y = G.Y
+	Y.goalDone = {}
+	Y.ping = function(vol)
+		pcall(function()
+			local s = Instance.new("Sound")
+			s.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+			s.Volume = (vol or State.AlertVol) / 100
+			s.Parent = game:GetService("SoundService")
+			s:Play()
+			game:GetService("Debris"):AddItem(s, 3)
+		end)
+	end
+	G.loop(1, function()
+		for _, p in ipairs(Y.progress) do
+			local c, m = p.cur(), math.max(p.max(), 1)
+			local r = math.clamp(c / m, 0, 1)
+			p.fill.Size = UDim2.new(r, 0, 1, 0)
+			p.tl.Text = p.title .. "  •  " .. G.commas(c) .. " / " .. G.commas(m) .. "  (" .. math.floor(r * 100) .. "%)"
+		end
+		if not State.GoalOn then return end
+		for _, p in ipairs(Y.progress) do
+			if p.cur() >= p.max() and not Y.goalDone[p.title] then
+				Y.goalDone[p.title] = true
+				notify("🎯 Meta atingida!", p.title, 5)
+				if State.SoundAlert then Y.ping() end
+				G.V.webhook("🎯 Meta atingida", p.title, 5763719)
+			end
+		end
+	end)
+
+	-- alertas sonoros
+	local lastF, lastB = nil, {}
+	G.loop(2, function()
+		if not State.SoundAlert then return end
+		if State.SoundFruit then
+			local f = G.findFruit()
+			if f and f ~= lastF then lastF = f; Y.ping() elseif not f then lastF = nil end
+		end
+		if State.SoundBoss then
+			local folder = workspace:FindFirstChild("Enemies")
+			if folder then
+				for _, m in ipairs(folder:GetChildren()) do
+					if G.BossSet[m.Name] and not lastB[m] then lastB[m] = true; Y.ping() end
+				end
+				for m in pairs(lastB) do if not m.Parent then lastB[m] = nil end end
+			end
+		end
+	end)
+
+	-- total geral (todas as sessões)
+	local LIFE_FILE = "AppleHub_v30_life.json"
+	Y.life = {secs = 0, beli = 0, lvls = 0, kills = 0, sessions = 1}
+	pcall(function()
+		if isfile and isfile(LIFE_FILE) then
+			local d = HttpService:JSONDecode(readfile(LIFE_FILE))
+			for k in pairs(Y.life) do if type(d[k]) == "number" then Y.life[k] = d[k] end end
+			Y.life.sessions = (d.sessions or 0) + 1
+		end
+	end)
+	local last = {beli = 0, lvls = 0, kills = 0}
+	local function saveLife() pcall(function() writefile(LIFE_FILE, HttpService:JSONEncode(Y.life)) end) end
+	G.loop(30, function()
+		local gb, gl, gk = G.gain("Beli"), G.gain("Level"), Y.kills
+		Y.life.secs = Y.life.secs + 30
+		Y.life.beli = Y.life.beli + math.max(0, gb - last.beli)
+		Y.life.lvls = Y.life.lvls + math.max(0, gl - last.lvls)
+		Y.life.kills = Y.life.kills + math.max(0, gk - last.kills)
+		last.beli, last.lvls, last.kills = gb, gl, gk
+		saveLife()
+	end)
+	gui.Destroying:Connect(saveLife)
+end)()
+
+------------------------------------------------------------------
+-- BLOCO D: chat log, macros
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Y) then return end
+	local Y = G.Y
+	Y.chat = {}
+	local lastKey, lastT = "", 0
+	local function addChat(name, msg)
+		if not State.ChatLog then return end
+		msg = tostring(msg):gsub("<[^>]+>", "")
+		local key = name .. msg
+		if key == lastKey and tick() - lastT < 1.5 then return end
+		lastKey, lastT = key, tick()
+		table.insert(Y.chat, 1, os.date("%H:%M") .. "  " .. name .. ": " .. msg)
+		if #Y.chat > 40 then table.remove(Y.chat) end
+		local low, hit = msg:lower(), false
+		if State.ChatAlert then
+			for k in tostring(State.ChatKeys):gmatch("[^,]+") do
+				k = k:match("^%s*(.-)%s*$"):lower()
+				if k ~= "" and low:find(k, 1, true) then hit = true break end
+			end
+		end
+		if State.ChatMine and name ~= lp.DisplayName then
+			if low:find(lp.Name:lower(), 1, true) or low:find(lp.DisplayName:lower(), 1, true) then hit = true end
+		end
+		if hit then
+			notify("💬 " .. name, msg, 4)
+			if State.SoundAlert then Y.ping() end
+		end
+	end
+	pcall(function()
+		local TCS = game:GetService("TextChatService")
+		conn(TCS.MessageReceived:Connect(function(m)
+			local src = m.TextSource
+			local who = src and Players:GetPlayerByUserId(src.UserId)
+			addChat(who and who.DisplayName or "sistema", m.Text or "")
+		end))
+	end)
+	local function hook(p) conn(p.Chatted:Connect(function(msg) addChat(p.DisplayName, msg) end)) end
+	for _, p in ipairs(Players:GetPlayers()) do hook(p) end
+	conn(Players.PlayerAdded:Connect(hook))
+
+	-- gravador de macros (teclado)
+	local rec = {on = false, t0 = 0, list = {}, downs = {}}
+	Y.macroRec = function()
+		if rec.on then return end
+		rec.on, rec.t0, rec.list, rec.downs = true, tick(), {}, {}
+		notify("Macro", "Gravando teclas...", 2)
+	end
+	Y.macroStopRec = function()
+		if not rec.on then return end
+		rec.on = false
+		State.Macro = rec.list
+		notify("Macro", #rec.list .. " eventos gravados.", 2.5)
+	end
+	conn(UIS.InputBegan:Connect(function(i, gp)
+		if not rec.on or gp or i.UserInputType ~= Enum.UserInputType.Keyboard or #rec.list >= 600 then return end
+		rec.downs[i.KeyCode.Name] = true
+		table.insert(rec.list, {t = tick() - rec.t0, k = i.KeyCode.Name})
+	end))
+	conn(UIS.InputEnded:Connect(function(i)
+		if not rec.on or i.UserInputType ~= Enum.UserInputType.Keyboard or #rec.list >= 600 then return end
+		if rec.downs[i.KeyCode.Name] then
+			rec.downs[i.KeyCode.Name] = nil
+			table.insert(rec.list, {t = tick() - rec.t0, k = i.KeyCode.Name, up = true})
+		end
+	end))
+	Y.playing, Y.stopPlay = false, false
+	Y.macroPlay = function()
+		if Y.playing then return end
+		local list = State.Macro
+		if #list == 0 then notify("Macro", "Nenhuma macro gravada.", 2) return end
+		Y.playing, Y.stopPlay = true, false
+		task.spawn(function()
+			repeat
+				local t0 = tick()
+				for _, e in ipairs(list) do
+					if not alive or Y.stopPlay then break end
+					local w = e.t / (State.MacroSpeed / 100) - (tick() - t0)
+					if w > 0 then task.wait(w) end
+					local ok, kc = pcall(function() return Enum.KeyCode[e.k] end)
+					if ok and kc then pcall(function() VIM:SendKeyEvent(not e.up, kc, false, game) end) end
+				end
+			until not State.MacroLoop or Y.stopPlay or not alive
+			Y.playing, Y.stopPlay = false, false
+		end)
+	end
+	Y.macroStopPlay = function() Y.stopPlay = true end
+	Y.macroState = function()
+		if rec.on then return "gravando (" .. #rec.list .. ")" end
+		if Y.playing then return "reproduzindo" end
+		return "parado"
+	end
+end)()
+
+------------------------------------------------------------------
+-- BLOCO E: auto performance + pânico
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Y) then return end
+	local Y, V = G.Y, G.V
+	local low, level = 0, 0
+	G.loop(1, function()
+		if not State.AutoPerf then low = 0 return end
+		if fps > 0 and fps < State.PerfMin then low = low + 1 else low = 0 end
+		if low >= 6 and level < 3 then
+			low = 0
+			level = level + 1
+			if not Y.perfSnap then
+				Y.perfSnap = {PCount = State.PCount, AnimGlow = State.AnimGlow, PartOn = State.PartOn, FilterOn = State.FilterOn,
+					TouchFX = State.TouchFX, EspTracer = State.EspTracer, RadarOn = State.RadarOn}
+			end
+			if level == 1 then
+				State.PCount = math.max(5, math.floor(State.PCount / 2)); State.AnimGlow = false; scheduleParts()
+			elseif level == 2 then
+				State.PartOn, State.FilterOn, State.TouchFX, State.EspTracer = false, false, false, false
+				scheduleParts(); V.applyFilters()
+			else
+				G.boostFPS()
+			end
+			syncAll()
+			notify("Auto Performance", "FPS baixo (" .. fps .. "). Nível " .. level .. "/3 aplicado.", 3)
+		end
+	end)
+	Y.perfRestore = function()
+		local s = Y.perfSnap
+		if not s then notify("Performance", "Nada para restaurar.", 2) return end
+		for k, v in pairs(s) do State[k] = v end
+		Y.perfSnap, level = nil, 0
+		scheduleParts(); V.applyFilters(); V.applyRadar(); applyAppearance(); syncAll()
+		notify("Performance", "Efeitos restaurados.", 2)
+	end
+
+	-- pânico
+	pcall(function() local o = parent:FindFirstChild("AppleHubPanic") if o then o:Destroy() end end)
+	local pgui = new("ScreenGui", {Name = "AppleHubPanic", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 1000, ZIndexBehavior = Enum.ZIndexBehavior.Sibling})
+	pgui.Parent = parent
+	local pb = new("TextButton", {Size = UDim2.fromOffset(30, 30), Position = UDim2.new(0, 8, 1, -46), BackgroundColor3 = Color3.fromRGB(30, 30, 38), BackgroundTransparency = 0.55,
+		Text = "⏻", TextSize = 15, TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, AutoButtonColor = false, Visible = State.PanicBtn, Parent = pgui}, {corner(15)})
+	local pst = drag(pb, pb)
+	Y.hidden = false
+	local skip = {Compact = true, GoalOn = true, ChatLog = true, AutoPerf = true, SoundAlert = true}
+	Y.panic = function()
+		if Y.hidden then
+			gui.Enabled = true
+			Y.hidden = false
+			return
+		end
+		if State.PanicOff then
+			State.BlackScreen = false
+			for _, f in ipairs(G.Feats) do
+				if not skip[f[2]] and type(State[f[2]]) == "boolean" and State[f[2]] then
+					State[f[2]] = false
+					if G.after[f[2]] then pcall(G.after[f[2]], false) end
+				end
+			end
+			pcall(function() G.Z.musicStop() end)
+			syncAll()
+		end
+		pcall(function() blur.Size = 0 end)
+		if State.PanicUnload then
+			pcall(function() if getgenv and getgenv().AppleHubUnload then getgenv().AppleHubUnload() end end)
+			return
+		end
+		gui.Enabled = false
+		Y.hidden = true
+	end
+	pb.MouseButton1Click:Connect(function() if not pst.moved then Y.panic() end end)
+	Y.applyPanicBtn = function() pb.Visible = State.PanicBtn end
+	conn(UIS.InputBegan:Connect(function(i, gp)
+		if gp or i.UserInputType ~= Enum.UserInputType.Keyboard then return end
+		if i.KeyCode.Name == State.PanicKey then Y.panic() end
+	end))
+	gui.Destroying:Connect(function() pcall(function() pgui:Destroy() end) end)
+end)()
+
+------------------------------------------------------------------
+-- BLOCO F: páginas novas
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Y) then return end
+	local Y, Z, V = G.Y, G.Z, G.V
+	local commas = G.commas
+	local white = Color3.new(1, 1, 1)
+	local function newPage(name, icon)
+		Y.pages[name] = true
+		Z.pages[name] = true
+		return addPage(name, icon)
+	end
+	local function listBox(page)
+		local b = new("Frame", {Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = page},
+			{new("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})})
+		regSearch(b, "", true)
+		return b
+	end
+	local function Progress(page, title, getCur, getMax)
+		local r = row(page, 52)
+		regSearch(r, title)
+		local tl = mkText({Size = UDim2.new(1, -24, 0, 20), Position = UDim2.fromOffset(12, 4), Text = title, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = r}, true)
+		local bar = new("Frame", {Size = UDim2.new(1, -24, 0, 8), Position = UDim2.fromOffset(12, 32), BackgroundColor3 = T.sub, Parent = r}, {corner(4)})
+		bind(bar, "BackgroundColor3", offColor)
+		local fill = new("Frame", {Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = white, Parent = bar}, {corner(4)})
+		bind(new("UIGradient", {Parent = fill}), "Color", gradSeq, true)
+		table.insert(Y.progress, {tl = tl, fill = fill, title = title, cur = getCur, max = getMax})
+	end
+
+	------------------------------------------------ INÍCIO
+	local pHome = newPage("Início", "⌂")
+	Section(pHome, "Resumo")
+	InfoRow(pHome, "Level", function() local v = G.dataVal("Level") return v and commas(v) or "—" end)
+	InfoRow(pHome, "Beli", function() local v = G.dataVal("Beli") return v and commas(v) or "—" end)
+	InfoRow(pHome, "Beli por hora", function() return G.rate("Beli") end)
+	InfoRow(pHome, "Kills (sessão)", function() return commas(Y.kills) end)
+	InfoRow(pHome, "Funções ligadas", function()
+		local n = 0
+		for _, f in ipairs(G.Feats) do if State[f[2]] == true then n = n + 1 end end
+		return tostring(n)
+	end)
+	InfoRow(pHome, "Tempo de sessão", function() return Z.fmtClock(tick() - startTick) end)
+	Section(pHome, "Atalhos rápidos (toque para ligar/desligar)")
+	local quick = {"Auto Level", "Auto Farm", "Auto Boss", "Auto Baús", "Auto Frutas", "Bring Mobs", "Modo Seguro", "Auto Skills", "Voar", "Noclip",
+		"ESP Jogadores", "Radar", "Modo Furtivo", "Fruit Sniper", "Tela Preta", "HUD"}
+	local grid = Grid(pHome, 134, 38)
+	local qbtns = {}
+	for _, name in ipairs(quick) do
+		local key = G.FeatMap[name]
+		if key then
+			local b = new("TextButton", {BackgroundColor3 = T.row, Text = name, TextSize = 12, TextColor3 = T.text, AutoButtonColor = false, Parent = grid}, {rc(11)})
+			regFont(b, true)
+			b.MouseButton1Click:Connect(function()
+				uiSound()
+				State[key] = not State[key]
+				if G.after[key] then pcall(G.after[key], State[key]) end
+				syncAll()
+			end)
+			table.insert(qbtns, {b, key})
+		end
+	end
+	G.loop(0.3, function()
+		for _, e in ipairs(qbtns) do
+			local on = State[e[2]]
+			e[1].BackgroundColor3 = on and T.accent or T.row
+			e[1].TextColor3 = on and white or T.text
+		end
+	end)
+	Section(pHome, "Ações")
+	Button(pHome, "⏻ PÂNICO (esconde tudo e desliga as funções)", function() Y.panic() end)
+	Button(pHome, "Trocar de servidor", function() G.serverHop() end)
+	Button(pHome, "Abrir paleta de comandos", function() Z.openPalette() end)
+	Section(pHome, "Total geral (todas as sessões)")
+	InfoRow(pHome, "Sessões", function() return commas(Y.life.sessions) end)
+	InfoRow(pHome, "Tempo total", function() return Z.fmtClock(Y.life.secs) end)
+	InfoRow(pHome, "Beli total ganho", function() return commas(Y.life.beli) end)
+	InfoRow(pHome, "Levels totais", function() return commas(Y.life.lvls) end)
+	InfoRow(pHome, "Kills totais", function() return commas(Y.life.kills) end)
+
+	------------------------------------------------ ALVO & METAS
+	local pGoal = newPage("Metas", "◎")
+	Section(pGoal, "Target HUD")
+	Toggle(pGoal, "Mostrar alvo atual (arrastável)", "TargetHud")
+	Slider(pGoal, "Tamanho", 60, 160, "THScale", function() Y.applyTH() end, "%")
+	Slider(pGoal, "Transparência", 0, 90, "THAlpha", function() Y.applyTH() end, "%")
+	Section(pGoal, "Kills")
+	InfoRow(pGoal, "Kills (sessão)", function() return commas(Y.kills) end)
+	InfoRow(pGoal, "Kills por hora", function()
+		local el = tick() - startTick
+		return el < 20 and "—" or commas(Y.kills / (el / 3600))
+	end)
+	Button(pGoal, "Zerar kills", function() Y.kills = 0 end)
+	Section(pGoal, "Metas da sessão")
+	Toggle(pGoal, "Avisar ao atingir (notificação + webhook)", "GoalOn")
+	Input(pGoal, "Meta de level", "ex: 2550 e Enter", function(t)
+		local n = tonumber(t)
+		if n then State.GoalLevel = math.clamp(math.floor(n), 1, 2550) end
+	end)
+	Input(pGoal, "Meta de Beli (ganho)", "ex: 1000000 e Enter", function(t)
+		local n = tonumber(t)
+		if n and n > 0 then State.GoalBeli = math.floor(n) end
+	end)
+	Input(pGoal, "Meta de kills", "ex: 500 e Enter", function(t)
+		local n = tonumber(t)
+		if n and n > 0 then State.GoalKills = math.floor(n) end
+	end)
+	Progress(pGoal, "Level", function() return G.dataVal("Level") or 0 end, function() return State.GoalLevel end)
+	Progress(pGoal, "Beli ganho", function() return math.max(0, G.gain("Beli")) end, function() return State.GoalBeli end)
+	Progress(pGoal, "Kills", function() return Y.kills end, function() return State.GoalKills end)
+	Button(pGoal, "Reiniciar avisos de meta", function() Y.goalDone = {}; notify("Metas", "Avisos reiniciados.", 2) end)
+
+	------------------------------------------------ CHAT
+	local pChat = newPage("Chat", "✎")
+	Section(pChat, "Chat Log (só leitura)")
+	Toggle(pChat, "Registrar mensagens do chat", "ChatLog")
+	Toggle(pChat, "Alertar por palavra-chave", "ChatAlert")
+	Toggle(pChat, "Alertar quando disserem meu nome", "ChatMine")
+	Input(pChat, "Palavras-chave", "ex: fruit,trade e Enter", function(t) State.ChatKeys = t; notify("Chat", "Palavras: " .. t, 2) end)
+	InfoRow(pChat, "Palavras atuais", function() return State.ChatKeys end)
+	local chatLabel = Label(pChat, "Nenhuma mensagem ainda. Ligue o Chat Log.")
+	G.loop(1, function()
+		if #Y.chat > 0 then chatLabel.Text = table.concat(Y.chat, "\n", 1, math.min(#Y.chat, 14)) end
+	end)
+	Button(pChat, "Limpar log", function() Y.chat = {}; chatLabel.Text = "Nenhuma mensagem ainda." end)
+	Button(pChat, "Copiar log", function()
+		pcall(function() setclipboard(table.concat(Y.chat, "\n")) end)
+		notify("Chat", "Log copiado.", 2)
+	end)
+
+	------------------------------------------------ MACRO
+	local pMac = newPage("Macro", "⏺")
+	Section(pMac, "Gravador de macros (teclado — PC)")
+	Label(pMac, "Grave uma sequência de teclas e reproduza depois. No celular, use o Combo da aba Ferramentas.")
+	Button(pMac, "● Gravar", function() Y.macroRec() end)
+	Button(pMac, "■ Parar gravação", function() Y.macroStopRec() end)
+	Button(pMac, "▶ Reproduzir", function() Y.macroPlay() end)
+	Button(pMac, "■ Parar reprodução", function() Y.macroStopPlay() end)
+	Toggle(pMac, "Repetir sem parar", "MacroLoop")
+	Slider(pMac, "Velocidade", 25, 300, "MacroSpeed", nil, "%")
+	InfoRow(pMac, "Estado", function() return Y.macroState() end)
+	InfoRow(pMac, "Eventos gravados", function() return tostring(#State.Macro) end)
+	Button(pMac, "Copiar macro", function()
+		pcall(function() setclipboard(HttpService:JSONEncode(State.Macro)) end)
+		notify("Macro", "Macro copiada.", 2)
+	end)
+	Input(pMac, "Importar macro", "cole o texto e Enter", function(t)
+		local ok, d = pcall(function() return HttpService:JSONDecode(t) end)
+		if ok and type(d) == "table" then State.Macro = d; notify("Macro", "Importada: " .. #d .. " eventos.", 2.5)
+		else notify("Macro", "Texto inválido.", 2) end
+	end)
+	Button(pMac, "Apagar macro", function() State.Macro = {}; notify("Macro", "Apagada.", 2) end)
+
+	------------------------------------------------ EDITOR DE TEMA
+	local pEd = newPage("Editor", "✐")
+	Section(pEd, "Editor de tema (cores em hex)")
+	Label(pEd, "Edite as cores do tema Custom, ex: #1e90ff. Ficam salvas junto com a config. Obs: com cores hex definidas, os sliders de cor personalizada não mudam mais o destaque (use \"Limpar\").")
+	local hexKeys = {{"Fundo", "bg"}, {"Barra lateral", "side"}, {"Cards", "row"}, {"Texto", "text"}, {"Texto fraco", "sub"}, {"Destaque 1", "accent"}, {"Destaque 2", "accent2"}}
+	local function setHex(key, t)
+		t = t:gsub("%s", "")
+		if not t:match("^#?%x%x%x%x%x%x$") then notify("Tema", "Use o formato #RRGGBB", 2) return end
+		if t:sub(1, 1) ~= "#" then t = "#" .. t end
+		State.CustomHex[key] = t
+		Themes.Custom[key] = Color3.fromHex(t)
+		applyTheme("Custom")
+	end
+	Button(pEd, "Começar a partir do tema atual", function()
+		for k, v in pairs(T) do
+			Themes.Custom[k] = v
+			State.CustomHex[k] = "#" .. v:ToHex()
+		end
+		applyTheme("Custom")
+		notify("Editor", "Tema atual copiado para o Custom.", 2)
+	end)
+	for _, e in ipairs(hexKeys) do
+		Input(pEd, e[1], "#RRGGBB e Enter", function(t) setHex(e[2], t) end)
+		InfoRow(pEd, e[1] .. " (atual)", function()
+			local c = Themes.Custom[e[2]]
+			return c and ("#" .. c:ToHex()) or "—"
+		end)
+	end
+	Button(pEd, "Aplicar tema Custom", function() Y.applyCustomHex(); applyTheme("Custom") end)
+	Button(pEd, "Copiar tema (hex)", function()
+		pcall(function() setclipboard(HttpService:JSONEncode(State.CustomHex)) end)
+		notify("Editor", "Tema copiado.", 2)
+	end)
+	Input(pEd, "Importar tema", "cole o texto e Enter", function(t)
+		local ok, d = pcall(function() return HttpService:JSONDecode(t) end)
+		if not (ok and type(d) == "table") then notify("Editor", "Texto inválido.", 2) return end
+		for _, e in ipairs(hexKeys) do
+			local h = d[e[2]]
+			if type(h) == "string" and h:match("^#%x%x%x%x%x%x$") then State.CustomHex[e[2]] = h; Themes.Custom[e[2]] = Color3.fromHex(h) end
+		end
+		applyTheme("Custom")
+		notify("Editor", "Tema importado.", 2)
+	end)
+	Button(pEd, "Limpar cores hex", function() State.CustomHex = {}; notify("Editor", "Cores hex removidas (reabra o Custom).", 2.5) end)
+
+	------------------------------------------------ SNAKE
+	local pSn = newPage("Snake", "❖")
+	Section(pSn, "Mini-jogo para o AFK")
+	local sl = Label(pSn, "Pontos: 0   Recorde: " .. State.SnakeHi)
+	local N, CS = 13, 18
+	local board = row(pSn, N * CS + 20)
+	local holder = new("Frame", {Size = UDim2.fromOffset(N * CS, N * CS), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Parent = board})
+	local cells = {}
+	for y = 1, N do
+		cells[y] = {}
+		for x = 1, N do
+			cells[y][x] = new("Frame", {Size = UDim2.fromOffset(CS - 2, CS - 2), Position = UDim2.fromOffset((x - 1) * CS, (y - 1) * CS), BackgroundColor3 = T.row, BorderSizePixel = 0, Parent = holder}, {corner(4)})
+		end
+	end
+	local snake, dir, ndir, food, score, running = {{7, 7}, {6, 7}, {5, 7}}, {1, 0}, {1, 0}, {10, 7}, 0, false
+	local function spawnFood()
+		local occ, free = {}, {}
+		for _, s in ipairs(snake) do occ[s[2] * 100 + s[1]] = true end
+		for y = 1, N do for x = 1, N do if not occ[y * 100 + x] then table.insert(free, {x, y}) end end end
+		food = free[math.random(#free)] or {1, 1}
+	end
+	local function draw()
+		for y = 1, N do for x = 1, N do cells[y][x].BackgroundColor3 = T.row end end
+		cells[food[2]][food[1]].BackgroundColor3 = Color3.fromRGB(255, 85, 85)
+		for i, s in ipairs(snake) do cells[s[2]][s[1]].BackgroundColor3 = (i == 1) and T.accent2 or T.accent end
+		sl.Text = "Pontos: " .. score .. "   Recorde: " .. State.SnakeHi
+	end
+	local function reset()
+		snake = {{7, 7}, {6, 7}, {5, 7}}
+		dir, ndir, score, running = {1, 0}, {1, 0}, 0, true
+		spawnFood()
+		draw()
+	end
+	local function setDir(dx, dy) if dx ~= -dir[1] or dy ~= -dir[2] then ndir = {dx, dy} end end
+	local function step()
+		dir = ndir
+		local h = snake[1]
+		local nx, ny = (h[1] - 1 + dir[1]) % N + 1, (h[2] - 1 + dir[2]) % N + 1
+		local eat = (nx == food[1] and ny == food[2])
+		for i = 1, #snake - (eat and 0 or 1) do
+			if snake[i][1] == nx and snake[i][2] == ny then
+				running = false
+				notify("Snake", "Fim de jogo! Pontos: " .. score, 2.5)
+				draw()
+				return
+			end
+		end
+		table.insert(snake, 1, {nx, ny})
+		if eat then
+			score = score + 10
+			if score > State.SnakeHi then State.SnakeHi = score end
+			spawnFood()
+		else
+			table.remove(snake)
+		end
+		draw()
+	end
+	draw()
+	local pad = row(pSn, 100)
+	local function pbtn(txt, x, y, dx, dy)
+		local b = mkText({Size = UDim2.fromOffset(46, 38), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, x, 0.5, y), Text = txt, TextSize = 18, AutoButtonColor = false, Parent = pad}, true, false, "TextButton")
+		b.BackgroundTransparency = 0
+		b.BackgroundColor3 = T.accent
+		b.TextColor3 = white
+		new("UICorner", {CornerRadius = UDim.new(0, 10), Parent = b})
+		b.MouseButton1Click:Connect(function() setDir(dx, dy) end)
+	end
+	pbtn("▲", 0, -26, 0, -1)
+	pbtn("▼", 0, 26, 0, 1)
+	pbtn("◀", -52, 0, -1, 0)
+	pbtn("▶", 52, 0, 1, 0)
+	Button(pSn, "▶ Novo jogo", reset)
+	Label(pSn, "No PC também funcionam as setas ou WASD enquanto esta aba estiver aberta.")
+	task.spawn(function()
+		while alive do
+			task.wait(0.15)
+			if running and shown and pSn.Parent and pSn.Parent.Visible then pcall(step) end
+		end
+	end)
+	conn(UIS.InputBegan:Connect(function(i, gp)
+		if gp or not running or not (pSn.Parent and pSn.Parent.Visible) then return end
+		local k = i.KeyCode
+		if k == Enum.KeyCode.Up or k == Enum.KeyCode.W then setDir(0, -1)
+		elseif k == Enum.KeyCode.Down or k == Enum.KeyCode.S then setDir(0, 1)
+		elseif k == Enum.KeyCode.Left or k == Enum.KeyCode.A then setDir(-1, 0)
+		elseif k == Enum.KeyCode.Right or k == Enum.KeyCode.D then setDir(1, 0) end
+	end))
+
+	------------------------------------------------ AJUSTES v30
+	local pSet = newPage("v30", "✧")
+	Section(pSet, "Layout")
+	Dropdown(pSet, "Abrir na aba", {"Início", "Farm", "Blox", "Mapa", "Comandos", "Automação", "Ferramentas", "Monitor", "Estilo"}, "StartTab")
+	Toggle(pSet, "Modo compacto (só ícones nas abas)", "Compact", function() Y.applyCompact() end)
+	Dropdown(pSet, "Título animado", {"Nenhuma", "Arco-íris", "Pulso"}, "TitleAnim", function(v)
+		if v == "Nenhuma" then titleLabel.TextColor3 = T.sub end
+	end)
+	Section(pSet, "Auto Performance")
+	Label(pSet, "Se o FPS ficar baixo por 6 segundos, reduz efeitos em até 3 níveis (partículas, filtros, otimização do mapa).")
+	Toggle(pSet, "Reduzir efeitos automaticamente", "AutoPerf")
+	Slider(pSet, "FPS mínimo aceitável", 10, 60, "PerfMin", nil, " fps")
+	Button(pSet, "Restaurar efeitos", function() Y.perfRestore() end)
+	Section(pSet, "Pânico")
+	Label(pSet, "Esconde todo o hub na hora e desliga as funções. Toque de novo (ou a tecla) para voltar.")
+	Input(pSet, "Tecla de pânico", "ex: End e Enter", function(t)
+		local k = t:gsub("%s", "")
+		local ok, kc = pcall(function() return Enum.KeyCode[k] end)
+		if ok and kc then State.PanicKey = k; notify("Pânico", "Tecla: " .. k, 2) else notify("Pânico", "Tecla inválida.", 2) end
+	end)
+	InfoRow(pSet, "Tecla atual", function() return State.PanicKey end)
+	Toggle(pSet, "Desligar todas as funções ao acionar", "PanicOff")
+	Toggle(pSet, "Descarregar o hub por completo", "PanicUnload")
+	Toggle(pSet, "Mostrar botão ⏻ na tela (arrastável)", "PanicBtn", function() Y.applyPanicBtn() end)
+	Section(pSet, "Alertas sonoros")
+	Toggle(pSet, "Tocar som nos alertas", "SoundAlert")
+	Toggle(pSet, "Fruta spawnou", "SoundFruit")
+	Toggle(pSet, "Boss apareceu", "SoundBoss")
+	Slider(pSet, "Volume do alerta", 5, 100, "AlertVol", nil, "%")
+	Button(pSet, "Testar som", function() Y.ping() end)
+	Label(pSet, "Dica: use Ctrl+K (paleta) ou o console: panic, compact, kills, macro rec/stop/play.")
+
+	-- comandos novos no console
+	local oldRun = V.run
+	V.run = function(text)
+		local cmd, rest = tostring(text):match("^%s*(%S+)%s*(.*)$")
+		if not cmd then return end
+		local c, say = cmd:lower(), V.say
+		local mine = {panic = true, compact = true, kills = true, macro = true}
+		if not mine[c] then return oldRun(text) end
+		say("> " .. text)
+		if c == "panic" then Y.panic()
+		elseif c == "compact" then State.Compact = not State.Compact; Y.applyCompact(); say("compacto: " .. tostring(State.Compact))
+		elseif c == "kills" then say("kills: " .. Y.kills)
+		elseif c == "macro" then
+			local a = rest:lower()
+			if a == "rec" then Y.macroRec()
+			elseif a == "stop" then Y.macroStopRec(); Y.macroStopPlay()
+			elseif a == "play" then Y.macroPlay()
+			elseif a == "clear" then State.Macro = {}
+			else say("uso: macro rec | stop | play | clear") end
+		end
+	end
+
+	-- aplicar tudo ao abrir
+	Y.applyTH()
+	Y.applyPanicBtn()
+	layoutTabs()
+	if State.StartTab ~= "Farm" then pcall(switchTab, State.StartTab) end
+	notify("Apple Hub v30", "Novo: Início, Metas, Chat, Macro, Editor, Snake e Pânico!", 4)
+end)()
