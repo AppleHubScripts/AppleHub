@@ -5287,3 +5287,633 @@ end)()
 	if State.StartTab ~= "Farm" then pcall(switchTab, State.StartTab) end
 	notify("Apple Hub v30", "Novo: Início, Metas, Chat, Macro, Editor, Snake e Pânico!", 4)
 end)()
+-- ===== APPLE HUB v40 — PARTE 6 (cole depois das Partes 1, 2 [v9], 3 [v16], 4 [v26] e 5 [v30]) =====
+
+------------------------------------------------------------------
+-- BLOCO A: estado, tema por horário, loja (lógica)
+------------------------------------------------------------------
+;(function()
+	if not (G and G.Y and G.Y.panic and addPage) then warn("[AppleHub v40] Cole esta parte DEPOIS das Partes 1 e 2 (v9), 3 (v16), 4 (v26) e 5 (v30).") return end
+	local K = {pages = {}}
+	G.W = K
+	local NEW = {
+		AutoTimeTheme = false, DayTheme = "Sky", NightTheme = "Midnight", DayStart = 7, NightStart = 19,
+		Autoexec = "", Aliases = {},
+		WishList = "Leopard,Kitsune,Dragon", AutoBuyWish = false,
+		Reminders = {}, RemindOn = true, RemMin = 30,
+		ConnAlert = false, PingMax = 250, ConnFps = 15,
+		WeaponRot = false, WRMelee = true, WRSword = true, WRGun = false, WRFruit = true, WRSecs = 30,
+		Looks = {},
+	}
+	for k, v in pairs(NEW) do
+		State[k] = v
+		Default[k] = type(v) == "table" and {} or v
+		table.insert(SAVE_KEYS, k)
+	end
+	pcall(function()
+		if isfile and isfile(CFG_FILE) then
+			local d = HttpService:JSONDecode(readfile(CFG_FILE))
+			for k, v in pairs(NEW) do
+				if d[k] ~= nil and type(d[k]) == type(v) then State[k] = d[k] end
+			end
+		end
+	end)
+	local tt = tostring(State.Title)
+	if State.Title == Default.Title or tt:find("v30", 1, true) or tt:find("v26", 1, true) or tt:find("v16", 1, true) then
+		State.Title = "Apple Hub v40  •  Blox Fruits"
+		titleLabel.Text = State.Title
+	end
+
+	local extra = {{"Rotação de Armas", "WeaponRot"}, {"Comprar Desejos", "AutoBuyWish"}, {"Alerta de Conexão", "ConnAlert"},
+		{"Lembretes", "RemindOn"}, {"Tema por Horário", "AutoTimeTheme"}}
+	for _, f in ipairs(extra) do
+		table.insert(G.Feats, f)
+		table.insert(G.FeatNames, f[1])
+		G.FeatMap[f[1]] = f[2]
+	end
+
+	-- tema por horário (dia / noite)
+	local lastPeriod
+	K.applyTimeTheme = function(force)
+		if not State.AutoTimeTheme then return end
+		local h = tonumber(os.date("%H")) or 12
+		local night = (h >= State.NightStart) or (h < State.DayStart)
+		local p = night and "n" or "d"
+		if p == lastPeriod and not force then return end
+		lastPeriod = p
+		local name = night and State.NightTheme or State.DayTheme
+		if Themes[name] then applyTheme(name) end
+	end
+	G.loop(30, function() K.applyTimeTheme(false) end)
+	G.after.AutoTimeTheme = function() lastPeriod = nil; K.applyTimeTheme(true) end
+
+	-- loja de frutas
+	K.stock = {}
+	K.shortName = function(n) return (tostring(n):gsub("%-.*$", "")) end
+	K.fetchStock = function()
+		local r = G.invoke("GetFruits")
+		if type(r) ~= "table" then return nil end
+		local list = {}
+		for _, f in pairs(r) do
+			if type(f) == "table" and f.OnSale and f.Name then
+				table.insert(list, {name = f.Name, price = tonumber(f.Price) or 0})
+			end
+		end
+		table.sort(list, function(a, b) return a.price < b.price end)
+		K.stock = list
+		return list
+	end
+	K.buyFruit = function(name)
+		local r = G.invoke("PurchaseRawFruit", name)
+		notify("Loja", K.shortName(name) .. ": " .. (r ~= nil and tostring(r) or "sem resposta"), 3)
+	end
+	local function wanted(name)
+		local n = K.shortName(name):lower()
+		for w in tostring(State.WishList):gmatch("[^,]+") do
+			w = w:match("^%s*(.-)%s*$"):lower()
+			if w ~= "" and n:find(w, 1, true) then return true end
+		end
+		return false
+	end
+	G.loop(45, function()
+		if not State.AutoBuyWish then return end
+		local list = K.fetchStock()
+		if not list then return end
+		local beli = G.dataVal("Beli") or 0
+		for _, f in ipairs(list) do
+			if wanted(f.name) and f.price <= beli then
+				K.buyFruit(f.name)
+				G.V.webhook("🛒 Fruta comprada", K.shortName(f.name) .. " por " .. G.commas(f.price), 15844367)
+				break
+			end
+		end
+	end)
+end)()
+
+------------------------------------------------------------------
+-- BLOCO B: rotação de armas, alerta de conexão, lembretes, looks, calculadora
+------------------------------------------------------------------
+;(function()
+	if not (G and G.W) then return end
+	local K, Y = G.W, G.Y
+
+	-- rotação de armas
+	local idx, lastRot = 0, tick()
+	G.loop(1, function()
+		if not State.WeaponRot or not G.anyAuto() then return end
+		if tick() - lastRot < State.WRSecs then return end
+		lastRot = tick()
+		local opts = {}
+		if State.WRMelee then table.insert(opts, "Melee") end
+		if State.WRSword then table.insert(opts, "Sword") end
+		if State.WRGun then table.insert(opts, "Gun") end
+		if State.WRFruit then table.insert(opts, "Blox Fruit") end
+		if #opts < 2 then return end
+		idx = idx % #opts + 1
+		State.Weapon = opts[idx]
+		syncAll()
+	end)
+
+	-- alerta de conexão
+	local badPing, badFps, lastWarn = 0, 0, 0
+	G.loop(2, function()
+		if not State.ConnAlert then badPing, badFps = 0, 0 return end
+		local p = getPing()
+		badPing = (p > State.PingMax) and badPing + 1 or 0
+		badFps = (fps > 0 and fps < State.ConnFps) and badFps + 1 or 0
+		if (badPing >= 3 or badFps >= 4) and tick() - lastWarn > 60 then
+			lastWarn = tick()
+			local msg = badPing >= 3 and ("Ping alto: " .. p .. " ms") or ("FPS baixo: " .. fps)
+			notify("⚠ Conexão", msg, 4)
+			if State.SoundAlert then Y.ping() end
+			G.V.webhook("⚠ Conexão instável", msg, 15158332)
+		end
+	end)
+
+	-- lembretes
+	K.remNext, K.remLabels = {}, {}
+	G.loop(1, function()
+		if not State.RemindOn then return end
+		for _, r in ipairs(State.Reminders) do
+			local m = tonumber(r.m) or 30
+			if not K.remNext[r] then K.remNext[r] = tick() + m * 60 end
+			if tick() >= K.remNext[r] then
+				K.remNext[r] = tick() + m * 60
+				notify("⏰ Lembrete", tostring(r.t), 6)
+				if State.SoundAlert then Y.ping() end
+			end
+			local lb = K.remLabels[r]
+			if lb then
+				pcall(function()
+					local left = math.max(0, math.floor(K.remNext[r] - tick()))
+					lb.Text = tostring(r.t) .. "  •  " .. string.format("%02d:%02d", math.floor(left / 60), left % 60)
+				end)
+			end
+		end
+	end)
+
+	-- looks (visuais salvos)
+	K.saveLook = function(name)
+		name = tostring(name or ""):match("^%s*(.-)%s*$")
+		if name == "" then notify("Visual", "Digite um nome.", 2) return end
+		local s = {}
+		for _, k in ipairs(APPEAR_KEYS) do s[k] = State[k] end
+		s.Theme = State.Theme
+		State.Looks[name] = s
+		if K.refreshLooks then K.refreshLooks() end
+		notify("Visual", "\"" .. name .. "\" salvo!", 2)
+	end
+	K.applyLook = function(name)
+		local s = State.Looks[name]
+		if not s then notify("Visual", "Look não existe.", 2) return end
+		for k, v in pairs(s) do
+			if Default[k] ~= nil then State[k] = v end
+		end
+		State.Scale = State.ScalePct / 100
+		tween(uiscale, 0.25, {Scale = State.Scale})
+		applyTheme(State.Theme)
+		applyAppearance(); syncAll(); scheduleParts()
+		notify("Visual", "Aplicado: " .. name, 2)
+	end
+
+	-- resetar widgets
+	K.resetWidgets = function()
+		local function set(name, pos)
+			local f = gui:FindFirstChild(name)
+			if f then f.Position = pos end
+		end
+		set("HUD", UDim2.new(0, 12, 0, 70))
+		set("Radar", UDim2.new(1, -State.RadarSize - 14, 0, 70))
+		set("Dock", UDim2.new(0.5, 0, 1, -90))
+		set("TargetHUD", UDim2.new(0.5, 0, 0, 28))
+		main.Position = UDim2.fromScale(0.5, 0.5)
+		bubble.Position = UDim2.new(0, 16, 0.4, 0)
+		pcall(function()
+			local pg = parent:FindFirstChild("AppleHubPanic")
+			local b = pg and pg:FindFirstChildOfClass("TextButton")
+			if b then b.Position = UDim2.new(0, 8, 1, -46) end
+		end)
+		notify("Layout", "Posições restauradas.", 2)
+	end
+
+	-- relatório
+	K.report = function()
+		local s = math.floor(tick() - startTick)
+		local c = G.commas
+		return table.concat({
+			"Apple Hub — relatório da sessão",
+			"Jogador: " .. lp.DisplayName,
+			"Tempo: " .. G.Z.fmtClock(s),
+			"Level: " .. c(G.dataVal("Level") or 0) .. " (+" .. c(G.gain("Level")) .. ")",
+			"Beli: " .. c(G.dataVal("Beli") or 0) .. " (+" .. c(G.gain("Beli")) .. ")",
+			"Beli/h: " .. G.rate("Beli") .. "   Lv/h: " .. G.rate("Level"),
+			"Kills: " .. c(Y.kills),
+			"Servidor: " .. #Players:GetPlayers() .. " jogadores",
+		}, "\n")
+	end
+
+	-- calculadora (sem loadstring: parser próprio, aceita k / m / b)
+	K.evaluate = function(src)
+		local s = tostring(src):lower():gsub("%s", ""):gsub(",", "."):gsub("x", "*")
+		local pos = 1
+		local function peek() return s:sub(pos, pos) end
+		local expr
+		local function number()
+			local num = s:match("^%d*%.?%d+", pos)
+			if not num then error("número esperado") end
+			pos = pos + #num
+			local v = tonumber(num)
+			local suf = peek()
+			if suf == "k" then v = v * 1e3; pos = pos + 1
+			elseif suf == "m" then v = v * 1e6; pos = pos + 1
+			elseif suf == "b" then v = v * 1e9; pos = pos + 1 end
+			return v
+		end
+		local function factor()
+			local c = peek()
+			if c == "(" then
+				pos = pos + 1
+				local v = expr()
+				if peek() ~= ")" then error("falta )") end
+				pos = pos + 1
+				return v
+			elseif c == "-" then
+				pos = pos + 1
+				return -factor()
+			end
+			return number()
+		end
+		local function power()
+			local v = factor()
+			if peek() == "^" then pos = pos + 1; return v ^ power() end
+			return v
+		end
+		local function term()
+			local v = power()
+			while true do
+				local c = peek()
+				if c == "*" then pos = pos + 1; v = v * power()
+				elseif c == "/" then pos = pos + 1; v = v / power()
+				else break end
+			end
+			return v
+		end
+		expr = function()
+			local v = term()
+			while true do
+				local c = peek()
+				if c == "+" then pos = pos + 1; v = v + term()
+				elseif c == "-" then pos = pos + 1; v = v - term()
+				else break end
+			end
+			return v
+		end
+		local v = expr()
+		if pos <= #s then error("símbolo inesperado: " .. peek()) end
+		return v
+	end
+	K.fmtResult = function(v)
+		if v ~= v then return "indefinido" end
+		if v == math.huge or v == -math.huge then return "infinito" end
+		if v == math.floor(v) and math.abs(v) < 1e15 then return G.commas(v) end
+		return string.format("%.4f", v)
+	end
+end)()
+
+------------------------------------------------------------------
+-- BLOCO C: páginas novas
+------------------------------------------------------------------
+;(function()
+	if not (G and G.W) then return end
+	local K, Y, Z, V = G.W, G.Y, G.Z, G.V
+	local commas = G.commas
+	local white = Color3.new(1, 1, 1)
+	local function newPage(name, icon)
+		K.pages[name] = true
+		Z.pages[name] = true
+		return addPage(name, icon)
+	end
+	local function listBox(page)
+		local b = new("Frame", {Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = page},
+			{new("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})})
+		regSearch(b, "", true)
+		return b
+	end
+	local function clearBox(box) for _, c in ipairs(box:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end end
+	local function sb(parent, txt, x, w, color)
+		local b = mkText({Size = UDim2.fromOffset(w, 26), Position = UDim2.new(1, x, 0.5, -13), Text = txt, TextSize = 12, AutoButtonColor = false, Parent = parent}, true, false, "TextButton")
+		b.BackgroundTransparency = 0
+		b.BackgroundColor3 = color
+		b.TextColor3 = white
+		new("UICorner", {CornerRadius = UDim.new(0, 8), Parent = b})
+		return b
+	end
+	local RED = Color3.fromRGB(220, 70, 70)
+	local function visible(page) return page.Parent and page.Parent.Visible end
+
+	------------------------------------------------ LOJA
+	local pSh = newPage("Loja", "⛁")
+	Section(pSh, "Loja de frutas (Blox Fruit Dealer)")
+	local shopLabel = Label(pSh, "Toque em atualizar para ver as frutas à venda.")
+	local shopBox
+	K.refreshShop = function()
+		local list = K.fetchStock()
+		clearBox(shopBox)
+		if not list then shopLabel.Text = "Não consegui ler a loja (o jogo não respondeu)."; return end
+		shopLabel.Text = #list .. " frutas à venda  •  Beli: " .. commas(G.dataVal("Beli") or 0)
+		for i, f in ipairs(list) do
+			local r = row(shopBox, 38)
+			r.LayoutOrder = i
+			mkText({Size = UDim2.new(1, -100, 1, 0), Position = UDim2.fromOffset(12, 0), Text = K.shortName(f.name) .. "  •  " .. commas(f.price), TextSize = 12,
+				TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r}, true)
+			sb(r, "Comprar", -82, 70, T.accent).MouseButton1Click:Connect(function() K.buyFruit(f.name) end)
+		end
+	end
+	Button(pSh, "Atualizar estoque", function() K.refreshShop() end)
+	shopBox = listBox(pSh)
+	Section(pSh, "Lista de desejos")
+	Input(pSh, "Frutas desejadas", "ex: leopard,kitsune e Enter", function(t) State.WishList = t; notify("Loja", "Desejos: " .. t, 2) end)
+	InfoRow(pSh, "Lista atual", function() return State.WishList end)
+	Toggle(pSh, "Comprar sozinho se tiver Beli (a cada 45 s)", "AutoBuyWish")
+
+	------------------------------------------------ INVENTÁRIO
+	local pIv = newPage("Inventário", "☐")
+	Section(pIv, "Itens que você carrega")
+	local invLabel = Label(pIv, "—")
+	local invBox
+	K.refreshInv = function()
+		clearBox(invBox)
+		local items = {}
+		local function scan(p, eq)
+			if not p then return end
+			for _, t in ipairs(p:GetChildren()) do
+				if t:IsA("Tool") then table.insert(items, {tool = t, eq = eq}) end
+			end
+		end
+		scan(lp.Character, true)
+		scan(lp:FindFirstChild("Backpack"), false)
+		table.sort(items, function(a, b) return (a.tool.ToolTip or "") .. a.tool.Name < (b.tool.ToolTip or "") .. b.tool.Name end)
+		invLabel.Text = #items .. " itens" .. (#items > 40 and " (mostrando 40)" or "")
+		for i = 1, math.min(#items, 40) do
+			local e = items[i]
+			local r = row(invBox, 38)
+			r.LayoutOrder = i
+			local tip = (e.tool.ToolTip ~= "" and e.tool.ToolTip) or "Item"
+			mkText({Size = UDim2.new(1, -150, 1, 0), Position = UDim2.fromOffset(12, 0), Text = e.tool.Name .. "  •  " .. tip .. (e.eq and "  ✓" or ""), TextSize = 12,
+				TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r}, true)
+			if not e.eq then
+				sb(r, "Equipar", -136, 64, T.accent).MouseButton1Click:Connect(function()
+					local h = G.hum()
+					if h and e.tool.Parent then pcall(function() h:EquipTool(e.tool) end) end
+					task.delay(0.3, K.refreshInv)
+				end)
+			end
+			if e.tool.ToolTip == "Blox Fruit" then
+				sb(r, "Guardar", -66, 58, T.accent2).MouseButton1Click:Connect(function()
+					G.buy("Guardar", "StoreFruit", e.tool:GetAttribute("OriginalName") or e.tool.Name, e.tool)
+					task.delay(0.6, K.refreshInv)
+				end)
+			end
+		end
+	end
+	Button(pIv, "Atualizar", function() K.refreshInv() end)
+	invBox = listBox(pIv)
+	G.loop(3, function() if shown and visible(pIv) then K.refreshInv() end end)
+
+	------------------------------------------------ LEMBRETES
+	local pRem = newPage("Lembretes", "◔")
+	Section(pRem, "Lembretes repetidos")
+	Label(pRem, "Ex: guardar fruta, checar Elite, beber água. O lembrete repete no intervalo escolhido.")
+	Toggle(pRem, "Lembretes ligados", "RemindOn")
+	Slider(pRem, "Intervalo do próximo lembrete", 1, 240, "RemMin", nil, " min")
+	local remBox
+	K.refreshRem = function()
+		clearBox(remBox)
+		table.clear(K.remLabels)
+		for i, r in ipairs(State.Reminders) do
+			local row0 = row(remBox, 38)
+			row0.LayoutOrder = i
+			K.remLabels[r] = mkText({Size = UDim2.new(1, -60, 1, 0), Position = UDim2.fromOffset(12, 0), Text = tostring(r.t), TextSize = 12,
+				TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = row0}, true)
+			sb(row0, "✕", -44, 34, RED).MouseButton1Click:Connect(function()
+				for k, v in ipairs(State.Reminders) do if v == r then table.remove(State.Reminders, k) break end end
+				K.refreshRem()
+			end)
+		end
+	end
+	Input(pRem, "Novo lembrete", "texto e Enter", function(t)
+		table.insert(State.Reminders, {t = t, m = State.RemMin})
+		K.refreshRem()
+		notify("Lembrete", t .. " (a cada " .. State.RemMin .. " min)", 2.5)
+	end)
+	remBox = listBox(pRem)
+	Button(pRem, "Apagar todos", function() State.Reminders = {}; K.refreshRem() end)
+	K.refreshRem()
+
+	------------------------------------------------ LAYOUTS
+	local pLay = newPage("Layouts", "▧")
+	Section(pLay, "Visuais salvos (tema, painel, botões, partículas...)")
+	Input(pLay, "Salvar visual atual", "nome e Enter", function(t) K.saveLook(t) end)
+	local lookBox
+	K.refreshLooks = function()
+		clearBox(lookBox)
+		local names = {}
+		for n in pairs(State.Looks) do table.insert(names, n) end
+		table.sort(names)
+		for i, n in ipairs(names) do
+			local r = row(lookBox, 40)
+			r.LayoutOrder = i
+			mkText({Size = UDim2.new(1, -130, 1, 0), Position = UDim2.fromOffset(12, 0), Text = n, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd, Parent = r}, true)
+			sb(r, "Aplicar", -116, 64, T.accent).MouseButton1Click:Connect(function() K.applyLook(n) end)
+			sb(r, "✕", -44, 34, RED).MouseButton1Click:Connect(function() State.Looks[n] = nil; K.refreshLooks() end)
+		end
+	end
+	lookBox = listBox(pLay)
+	K.refreshLooks()
+	Section(pLay, "Widgets na tela")
+	Toggle(pLay, "HUD", "HudOn", function() G.hudApply() end)
+	Toggle(pLay, "Radar", "RadarOn", function() V.applyRadar() end)
+	Toggle(pLay, "Dock", "DockOn", function() V.rebuildDock() end)
+	Toggle(pLay, "Target HUD", "TargetHud")
+	Button(pLay, "Resetar posição de todos os widgets", function() K.resetWidgets() end)
+	Label(pLay, "Perdeu algum widget fora da tela? Esse botão traz todos de volta e recentraliza o painel.")
+
+	------------------------------------------------ SESSÃO
+	local pSe = newPage("Sessão", "☷")
+	Section(pSe, "Servidor")
+	InfoRow(pSe, "Tempo do servidor", function() return Z.fmtClock(workspace.DistributedGameTime) end)
+	InfoRow(pSe, "Jogadores", function() return #Players:GetPlayers() .. "/" .. Players.MaxPlayers end)
+	InfoRow(pSe, "Versão do lugar", function() return tostring(game.PlaceVersion) end)
+	InfoRow(pSe, "Job ID", function() return string.sub(game.JobId, 1, 13) .. "…" end)
+	InfoRow(pSe, "Ping", function() return getPing() .. " ms" end)
+	Section(pSe, "Amigos no servidor")
+	local friendsLabel = Label(pSe, "Procurando...")
+	local fr = {}
+	G.loop(8, function()
+		local names = {}
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= lp then
+				if fr[p.UserId] == nil then
+					fr[p.UserId] = false
+					task.spawn(function()
+						local ok, r = pcall(function() return lp:IsFriendsWith(p.UserId) end)
+						fr[p.UserId] = ok and r or false
+					end)
+				end
+				if fr[p.UserId] then table.insert(names, p.DisplayName) end
+			end
+		end
+		friendsLabel.Text = #names > 0 and ("Amigos aqui: " .. table.concat(names, ", ")) or "Nenhum amigo neste servidor."
+	end)
+	Section(pSe, "Relatório da sessão")
+	local repLabel = Label(pSe, "—")
+	G.loop(2, function() if shown and visible(pSe) then repLabel.Text = K.report() end end)
+	Button(pSe, "Copiar relatório", function()
+		pcall(function() setclipboard(K.report()) end)
+		notify("Relatório", "Copiado!", 2)
+	end)
+	Button(pSe, "Enviar relatório ao Discord", function()
+		local was = State.WebhookOn
+		State.WebhookOn = true
+		local ok = V.webhook("📋 Relatório da sessão", K.report(), 3447003)
+		State.WebhookOn = was
+		notify("Relatório", ok and "Enviado!" or "Configure o webhook primeiro (aba Webhook).", 3)
+	end)
+	Section(pSe, "Calculadora (aceita k, m, b — ex: 2.5m/45k)")
+	local calcLabel = Label(pSe, "Resultado aparece aqui.")
+	Input(pSe, "Expressão", "ex: (5m-1.2m)/80k e Enter", function(t)
+		local ok, v = pcall(K.evaluate, t)
+		if ok then
+			K.lastCalc = v
+			calcLabel.Text = t .. "  =  " .. K.fmtResult(v)
+		else
+			calcLabel.Text = "Erro: " .. tostring(v):gsub("^.-:%d+: ", "")
+		end
+	end)
+	Button(pSe, "Copiar resultado", function()
+		if K.lastCalc then
+			pcall(function() setclipboard(tostring(K.lastCalc)) end)
+			notify("Calculadora", "Copiado.", 1.5)
+		end
+	end)
+
+	------------------------------------------------ AJUSTES v40
+	local pV = newPage("v40", "✪")
+	Section(pV, "Autoexec (comandos ao iniciar)")
+	Label(pV, "Separe por ponto e vírgula. Ex: speed 80; on radar; theme dracula. Roda 3 segundos depois de abrir o hub.")
+	Input(pV, "Comandos", "ex: speed 80; on radar e Enter", function(t) State.Autoexec = t; notify("Autoexec", "Salvo.", 2) end)
+	InfoRow(pV, "Atual", function() return State.Autoexec ~= "" and State.Autoexec or "(vazio)" end)
+	Button(pV, "Executar agora", function() K.runLine(State.Autoexec) end)
+	Button(pV, "Limpar autoexec", function() State.Autoexec = "" end)
+	Section(pV, "Atalhos de comandos (aliases)")
+	Label(pV, "Formato: nome=comando;comando. Ex: afk=on blackscreen;on noclip. Depois digite só  afk  no console.")
+	local aliasLabel = Label(pV, "Nenhum atalho criado.")
+	K.refreshAlias = function()
+		local lines = {}
+		for n, c in pairs(State.Aliases) do table.insert(lines, n .. "  →  " .. c) end
+		table.sort(lines)
+		aliasLabel.Text = #lines > 0 and table.concat(lines, "\n") or "Nenhum atalho criado."
+	end
+	K.setAlias = function(text)
+		local n, c = tostring(text):match("^%s*([%w_]+)%s*=%s*(.+)$")
+		if not n then notify("Alias", "Use: nome=comando;comando", 3) return false end
+		State.Aliases[n:lower()] = c
+		K.refreshAlias()
+		notify("Alias", n .. " criado.", 2)
+		return true
+	end
+	Input(pV, "Criar atalho", "nome=comando e Enter", function(t) K.setAlias(t) end)
+	Button(pV, "Limpar todos os atalhos", function() State.Aliases = {}; K.refreshAlias() end)
+	K.refreshAlias()
+	Section(pV, "Tema por horário")
+	local pick = {"Midnight", "Ocean", "Sunset", "Aurora", "Sakura", "Dracula", "Nord", "AMOLED", "Claro", "Sky", "Sand", "Menta", "Rosa", "Bubblegum", "Void"}
+	Toggle(pV, "Trocar tema entre dia e noite", "AutoTimeTheme", function() K.applyTimeTheme(true) end)
+	Dropdown(pV, "Tema do dia", pick, "DayTheme", function() K.applyTimeTheme(true) end)
+	Dropdown(pV, "Tema da noite", pick, "NightTheme", function() K.applyTimeTheme(true) end)
+	Slider(pV, "Dia começa às", 0, 23, "DayStart", nil, "h")
+	Slider(pV, "Noite começa às", 0, 23, "NightStart", nil, "h")
+	Section(pV, "Rotação de armas (durante o farm)")
+	Toggle(pV, "Alternar arma automaticamente", "WeaponRot")
+	Slider(pV, "Trocar a cada", 10, 180, "WRSecs", nil, " s")
+	Toggle(pV, "Usar Melee", "WRMelee")
+	Toggle(pV, "Usar Sword", "WRSword")
+	Toggle(pV, "Usar Gun", "WRGun")
+	Toggle(pV, "Usar Blox Fruit", "WRFruit")
+	Section(pV, "Alerta de conexão")
+	Toggle(pV, "Avisar se o ping subir ou o FPS cair", "ConnAlert")
+	Slider(pV, "Ping máximo", 100, 800, "PingMax", nil, " ms")
+	Slider(pV, "FPS mínimo", 5, 40, "ConnFps", nil, " fps")
+
+	------------------------------------------------ console: comandos novos e aliases
+	K.runLine = function(line)
+		for part in tostring(line):gmatch("[^;]+") do
+			part = part:match("^%s*(.-)%s*$")
+			if part ~= "" then V.run(part) end
+		end
+	end
+	local oldRun, depth = V.run, 0
+	local mine = {alias = true, unalias = true, aliases = true, look = true, report = true, stock = true, remind = true, calc = true, wish = true}
+	V.run = function(text)
+		local cmd, rest = tostring(text):match("^%s*(%S+)%s*(.*)$")
+		if not cmd then return end
+		local c, say = cmd:lower(), V.say
+		local al = State.Aliases[c]
+		if al and not mine[c] then
+			if depth > 3 then say("alias recursivo bloqueado") return end
+			depth = depth + 1
+			say("> " .. text)
+			pcall(K.runLine, al)
+			depth = depth - 1
+			return
+		end
+		if not mine[c] then return oldRun(text) end
+		say("> " .. text)
+		if c == "alias" then
+			if K.setAlias(rest) then say("alias criado") else say("uso: alias nome=cmd;cmd") end
+		elseif c == "unalias" then
+			State.Aliases[rest:lower()] = nil
+			K.refreshAlias()
+			say("alias removido")
+		elseif c == "aliases" then
+			local lines = {}
+			for n, v in pairs(State.Aliases) do table.insert(lines, n .. " → " .. v) end
+			say(#lines > 0 and table.concat(lines, " | ") or "nenhum alias")
+		elseif c == "look" then
+			if State.Looks[rest] then K.applyLook(rest); say("look " .. rest) else say("look não existe") end
+		elseif c == "report" then
+			say(K.report())
+		elseif c == "stock" then
+			task.spawn(function()
+				local list = K.fetchStock()
+				if not list then say("não consegui ler a loja") return end
+				local out = {}
+				for _, f in ipairs(list) do table.insert(out, K.shortName(f.name) .. " (" .. commas(f.price) .. ")") end
+				say(#out > 0 and table.concat(out, ", ") or "loja vazia")
+			end)
+		elseif c == "remind" then
+			local m, t = rest:match("^(%d+)%s+(.+)$")
+			if m then
+				table.insert(State.Reminders, {t = t, m = tonumber(m)})
+				K.refreshRem()
+				say("lembrete a cada " .. m .. " min")
+			else
+				say("uso: remind 30 texto")
+			end
+		elseif c == "calc" then
+			local ok, v = pcall(K.evaluate, rest)
+			say(ok and ("= " .. K.fmtResult(v)) or "expressão inválida")
+		elseif c == "wish" then
+			State.WishList = rest
+			say("desejos: " .. rest)
+		end
+	end
+
+	-- aplicar tudo ao abrir
+	K.applyTimeTheme(true)
+	layoutTabs()
+	if State.Autoexec ~= "" then
+		task.delay(3, function() pcall(K.runLine, State.Autoexec) end)
+	end
+	notify("Apple Hub v40", "Novo: Loja, Inventário, Lembretes, Layouts, Sessão e Autoexec!", 4)
+end)()
