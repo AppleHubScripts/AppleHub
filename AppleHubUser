@@ -1,3 +1,226 @@
+-- ===== APPLE HUB — PARTE 0: SELETOR DE IDIOMA (cole NO TOPO, ANTES da Parte 1) =====
+;(function()
+	local Players = game:GetService("Players")
+	local TS = game:GetService("TweenService")
+	local RS = game:GetService("RunService")
+	local genv = (getgenv and getgenv()) or _G
+	local cam = workspace.CurrentCamera
+
+	-- {código, nome nativo, nome em inglês, idioma do dicionário do menu}
+	local LANGS = {
+		{"en", "English", "English", "en"}, {"pt", "Português", "Portuguese", "en"}, {"es", "Español", "Spanish", "es"},
+		{"fr", "Français", "French", "fr"}, {"de", "Deutsch", "German", "de"}, {"it", "Italiano", "Italian", "it"},
+		{"ru", "Русский", "Russian", "ru"}, {"tr", "Türkçe", "Turkish", "tr"}, {"id", "Bahasa Indonesia", "Indonesian", "id"},
+		{"zh", "中文", "Chinese", "zh"}, {"ja", "日本語", "Japanese", "ja"}, {"ko", "한국어", "Korean", "ko"},
+		{"ar", "العربية", "Arabic", "ar"}, {"vi", "Tiếng Việt", "Vietnamese", "vi"}, {"pl", "Polski", "Polish", "pl"},
+		{"nl", "Nederlands", "Dutch", "en"}, {"hi", "हिन्दी", "Hindi", "en"}, {"th", "ไทย", "Thai", "en"},
+		{"uk", "Українська", "Ukrainian", "en"}, {"ro", "Română", "Romanian", "en"}, {"sv", "Svenska", "Swedish", "en"},
+		{"cs", "Čeština", "Czech", "en"}, {"el", "Ελληνικά", "Greek", "en"}, {"he", "עברית", "Hebrew", "en"},
+		{"fa", "فارسی", "Persian", "en"}, {"ms", "Bahasa Melayu", "Malay", "en"}, {"fil", "Filipino", "Filipino", "en"},
+		{"bn", "বাংলা", "Bengali", "en"}, {"hu", "Magyar", "Hungarian", "en"}, {"da", "Dansk", "Danish", "en"},
+		{"fi", "Suomi", "Finnish", "en"}, {"no", "Norsk", "Norwegian", "en"}, {"sk", "Slovenčina", "Slovak", "en"},
+		{"bg", "Български", "Bulgarian", "en"}, {"sr", "Srpski", "Serbian", "en"}, {"hr", "Hrvatski", "Croatian", "en"},
+		{"ca", "Català", "Catalan", "en"}, {"ur", "اردو", "Urdu", "en"}, {"sw", "Kiswahili", "Swahili", "en"},
+	}
+	local byCode = {}
+	for _, l in ipairs(LANGS) do byCode[l[1]] = l end
+	local CONT = {en = "Continue", pt = "Continuar", es = "Continuar", fr = "Continuer", de = "Weiter", it = "Continua", ru = "Продолжить",
+		tr = "Devam et", id = "Lanjutkan", zh = "继续", ja = "続ける", ko = "계속", ar = "متابعة", vi = "Tiếp tục", pl = "Dalej"}
+	local TITLES = {"Choose your language", "Escolha seu idioma", "Elige tu idioma", "Choisissez votre langue", "Wähle deine Sprache", "Scegli la tua lingua",
+		"Выберите язык", "Dilini seç", "Pilih bahasa Anda", "选择你的语言", "言語を選択", "언어를 선택하세요", "اختر لغتك", "Chọn ngôn ngữ", "Wybierz język"}
+
+	local function rd(f)
+		local ok, r = pcall(function() if isfile and isfile(f) then return readfile(f) end end)
+		if ok and r then return (tostring(r):gsub("%s", "")) end
+	end
+	local function wr(f, c) pcall(function() if writefile then writefile(f, c) end end) end
+	local function detect()
+		local id = ""
+		pcall(function() id = game:GetService("LocalizationService").RobloxLocaleId end)
+		if id == "" or id == nil then pcall(function() id = Players.LocalPlayer.LocaleId end) end
+		id = tostring(id):lower():gsub("_", "-")
+		local two = id:sub(1, 2)
+		local alias = {nb = "no", nn = "no", iw = "he", ["in"] = "id", tl = "fil", jw = "id"}
+		two = alias[two] or two
+		if id:sub(1, 3) == "fil" then two = "fil" end
+		return byCode[two] and two or "en"
+	end
+	local function save(code)
+		genv.AppleHubLang = code
+		wr("AppleHub_lang.txt", code)
+	end
+	genv.AppleHubLangs = LANGS
+	genv.AppleHubDetect = detect
+	genv.AppleHubSaveLang = save
+	genv.AppleHubAskLang = function() return rd("AppleHub_lang_ask.txt") ~= nil end
+	genv.AppleHubSetAsk = function(v)
+		if v then wr("AppleHub_lang_ask.txt", "1")
+		else pcall(function() if delfile and isfile and isfile("AppleHub_lang_ask.txt") then delfile("AppleHub_lang_ask.txt") end end) end
+	end
+
+	local function showPicker(onChosen)
+		local parent = (gethui and gethui()) or game:GetService("CoreGui")
+		pcall(function() local o = parent:FindFirstChild("AppleHubLang") if o then o:Destroy() end end)
+		local sg = Instance.new("ScreenGui")
+		sg.Name, sg.ResetOnSpawn, sg.IgnoreGuiInset, sg.DisplayOrder = "AppleHubLang", false, true, 2000
+		sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		sg.Parent = parent
+		local A1, A2, WHITE = Color3.fromRGB(10, 132, 255), Color3.fromRGB(160, 90, 255), Color3.new(1, 1, 1)
+		local function mk(class, props, par)
+			local o = Instance.new(class)
+			for k, v in pairs(props) do o[k] = v end
+			o.Parent = par
+			return o
+		end
+		local vp = cam.ViewportSize
+		local root = mk("CanvasGroup", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, GroupTransparency = 1}, sg)
+		mk("UIGradient", {Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(3, 3, 10), Color3.fromRGB(14, 10, 36))}, root)
+		TS:Create(root, TweenInfo.new(0.5), {GroupTransparency = 0}):Play()
+
+		-- estrelas
+		local stars = {}
+		for i = 1, 70 do
+			local f = mk("Frame", {Size = UDim2.fromOffset(2, 2), BorderSizePixel = 0, Position = UDim2.fromScale(math.random(), math.random()),
+				BackgroundColor3 = (i % 3 == 0) and A1 or ((i % 3 == 1) and A2 or WHITE)}, root)
+			mk("UICorner", {CornerRadius = UDim.new(1, 0)}, f)
+			stars[i] = {f = f, x = math.random(), y = math.random(), s = 0.01 + math.random() * 0.03, ph = math.random() * 6}
+		end
+		local conn1 = RS.RenderStepped:Connect(function(dt)
+			local t = tick()
+			for _, s in ipairs(stars) do
+				s.y = s.y - s.s * dt
+				if s.y < -0.02 then s.y = 1.02; s.x = math.random() end
+				s.f.Position = UDim2.fromScale(s.x, s.y)
+				s.f.BackgroundTransparency = 0.35 + 0.45 * (math.sin(t * 1.5 + s.ph) ^ 2)
+			end
+		end)
+
+		-- cabeçalho
+		local brand = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 18), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.05), BackgroundTransparency = 1,
+			Text = "A P P L E   H U B", TextSize = 13, Font = Enum.Font.GothamBold, TextColor3 = A1}, root)
+		local title = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 52), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.115), BackgroundTransparency = 1,
+			Text = TITLES[1], TextSize = math.clamp(math.floor(vp.Y * 0.055), 22, 40), Font = Enum.Font.GothamBold, TextColor3 = WHITE}, root)
+		task.spawn(function()
+			local i = 1
+			while sg.Parent do
+				task.wait(1.8)
+				if not sg.Parent then break end
+				TS:Create(title, TweenInfo.new(0.3), {TextTransparency = 1}):Play()
+				task.wait(0.32)
+				i = i % #TITLES + 1
+				title.Text = TITLES[i]
+				TS:Create(title, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+			end
+		end)
+
+		-- busca
+		local bw = math.clamp(vp.X * 0.8, 220, 420)
+		local boxF = mk("Frame", {Size = UDim2.fromOffset(bw, 38), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.2), BackgroundColor3 = Color3.fromRGB(26, 26, 44), BackgroundTransparency = 0.2}, root)
+		mk("UICorner", {CornerRadius = UDim.new(0, 12)}, boxF)
+		mk("UIStroke", {Color = A1, Transparency = 0.6, Thickness = 1.2}, boxF)
+		local box = mk("TextBox", {Size = UDim2.new(1, -20, 1, 0), Position = UDim2.fromOffset(10, 0), BackgroundTransparency = 1, Text = "", PlaceholderText = "Search / Buscar / 搜索 / Поиск ...",
+			TextSize = 14, Font = Enum.Font.Gotham, TextColor3 = WHITE, PlaceholderColor3 = Color3.fromRGB(130, 130, 155), ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left}, boxF)
+
+		-- grade de idiomas
+		local detected = detect()
+		local sel = genv.AppleHubLang or detected
+		local gw = math.clamp(vp.X * 0.92, 260, 760)
+		local cols = gw >= 640 and 4 or (gw >= 480 and 3 or 2)
+		local cw = math.floor((gw - (cols - 1) * 8 - 12) / cols)
+		local grid = mk("ScrollingFrame", {Size = UDim2.new(0, gw, 0.54, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.26), BackgroundTransparency = 1,
+			BorderSizePixel = 0, ScrollBarThickness = 4, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new()}, root)
+		mk("UIGridLayout", {CellSize = UDim2.fromOffset(cw, 54), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder}, grid)
+		mk("UIPadding", {PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 6), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8)}, grid)
+
+		local cards, touched, cd, finished = {}, false, 12, false
+		local contBtn, hint
+		local function refresh()
+			for code, c in pairs(cards) do
+				c.stroke.Enabled = (code == sel)
+				c.check.Visible = (code == sel)
+			end
+			if contBtn then
+				local base = CONT[sel] or "Continue"
+				contBtn.Text = touched and base or (base .. "  •  " .. cd)
+			end
+		end
+		local order = {}
+		if byCode[detected] then table.insert(order, byCode[detected]) end
+		for _, l in ipairs(LANGS) do if l[1] ~= detected then table.insert(order, l) end end
+		for i, l in ipairs(order) do
+			local code = l[1]
+			local b = mk("TextButton", {BackgroundColor3 = Color3.fromRGB(26, 26, 44), BackgroundTransparency = 0.15, Text = "", AutoButtonColor = false, LayoutOrder = i}, grid)
+			mk("UICorner", {CornerRadius = UDim.new(0, 12)}, b)
+			local st = mk("UIStroke", {Thickness = 2.5, Color = WHITE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Enabled = false}, b)
+			mk("UIGradient", {Color = ColorSequence.new(A1, A2)}, st)
+			mk("TextLabel", {Size = UDim2.new(1, -34, 0, 24), Position = UDim2.fromOffset(12, 7), BackgroundTransparency = 1, Text = l[2], TextSize = 16,
+				Font = Enum.Font.GothamBold, TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd}, b)
+			mk("TextLabel", {Size = UDim2.new(1, -34, 0, 16), Position = UDim2.fromOffset(12, 31), BackgroundTransparency = 1, Text = l[3] .. ((code == detected) and "   ★ auto" or ""),
+				TextSize = 11, Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(150, 150, 175), TextXAlignment = Enum.TextXAlignment.Left}, b)
+			local check = mk("TextLabel", {Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), BackgroundTransparency = 1,
+				Text = "✓", TextSize = 18, Font = Enum.Font.GothamBold, TextColor3 = A1, Visible = false}, b)
+			cards[code] = {btn = b, stroke = st, check = check, l = l}
+			b.MouseButton1Click:Connect(function() touched = true; sel = code; refresh() end)
+		end
+		grid.InputBegan:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.Touch or i.UserInputType == Enum.UserInputType.MouseButton1 then touched = true; refresh() end
+		end)
+		box:GetPropertyChangedSignal("Text"):Connect(function()
+			touched = true
+			local q = box.Text:lower()
+			for code, c in pairs(cards) do
+				c.btn.Visible = (q == "") or (c.l[2]:lower():find(q, 1, true) ~= nil) or (c.l[3]:lower():find(q, 1, true) ~= nil) or (code:find(q, 1, true) ~= nil)
+			end
+			refresh()
+		end)
+
+		-- rodapé
+		hint = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.855), BackgroundTransparency = 1,
+			Text = "★ auto-detected: " .. (byCode[detected] and byCode[detected][2] or "English"), TextSize = 11, Font = Enum.Font.Gotham, TextColor3 = Color3.fromRGB(140, 140, 165)}, root)
+		contBtn = mk("TextButton", {Size = UDim2.fromOffset(280, 46), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.92), BackgroundColor3 = WHITE,
+			Text = "", TextSize = 16, Font = Enum.Font.GothamBold, TextColor3 = WHITE, AutoButtonColor = false}, root)
+		mk("UICorner", {CornerRadius = UDim.new(0, 14)}, contBtn)
+		mk("UIGradient", {Color = ColorSequence.new(A1, A2)}, contBtn)
+		mk("UIStroke", {Color = WHITE, Transparency = 0.7, Thickness = 1.2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, contBtn)
+		refresh()
+
+		local function finish()
+			if finished then return end
+			finished = true
+			conn1:Disconnect()
+			save(sel)
+			TS:Create(root, TweenInfo.new(0.45), {GroupTransparency = 1}):Play()
+			task.delay(0.5, function()
+				pcall(function() sg:Destroy() end)
+				if onChosen then pcall(onChosen, sel) end
+			end)
+		end
+		contBtn.MouseButton1Click:Connect(function() touched = true; finish() end)
+		task.spawn(function()
+			while sg.Parent and not finished do
+				task.wait(1)
+				if touched or finished then break end
+				cd = cd - 1
+				refresh()
+				if cd <= 0 then finish() break end
+			end
+		end)
+	end
+
+	genv.AppleHubPickLang = function(cb) task.spawn(showPicker, cb) end
+
+	-- decide se mostra o seletor agora
+	local ask = genv.AppleHubAskLang()
+	local saved = rd("AppleHub_lang.txt")
+	if not ask then
+		if genv.AppleHubLang then return end
+		if saved and byCode[saved] then genv.AppleHubLang = saved return end
+	end
+	local done = false
+	showPicker(function() done = true end)
+	while not done do task.wait(0.1) end
+end)()
+-- ===== FIM DA PARTE 0 — cole a PARTE 1 logo abaixo =====
 --// Apple Hub v9 | Blox Fruits | Delta Executor (mobile + PC)  — PARTE 1/2
 if getgenv and getgenv().AppleHubUnload then pcall(getgenv().AppleHubUnload) end
 
@@ -5916,4 +6139,378 @@ end)()
 		task.delay(3, function() pcall(K.runLine, State.Autoexec) end)
 	end
 	notify("Apple Hub v40", "Novo: Loja, Inventário, Lembretes, Layouts, Sessão e Autoexec!", 4)
+end)()
+-- ===== APPLE HUB v50 — PARTE 7: IDIOMAS + DIAGNÓSTICO (cole NO FIM, depois das Partes 1–6) =====
+;(function()
+	if not (G and G.W and addPage) then warn("[AppleHub v50] Cole esta parte DEPOIS das Partes 1 a 6.") return end
+	local genv = (getgenv and getgenv()) or _G
+	local L = {}
+	G.L = L
+
+	local DL = {"en", "es", "fr", "de", "it", "ru", "tr", "id", "zh", "ja", "ko", "ar", "vi", "pl"}
+	local LIDX = {}
+	for i, c in ipairs(DL) do LIDX[c] = i end
+	local LANGS = genv.AppleHubLangs or {{"en", "English", "English", "en"}, {"pt", "Português", "Portuguese", "en"}}
+
+	------------------------------------------------------------------
+	-- DICIONÁRIO  (ordem: en|es|fr|de|it|ru|tr|id|zh|ja|ko|ar|vi|pl)
+	------------------------------------------------------------------
+	local DICT = {}
+	local function norm(s) return string.lower(s) end
+	local function A(pt, packed)
+		local arr = {}
+		for part in string.gmatch(packed, "[^|]+") do arr[#arr + 1] = part end
+		DICT[norm(pt)] = arr
+	end
+	-- abas
+	A("Início", "Home|Inicio|Accueil|Start|Home|Главная|Ana Sayfa|Beranda|主页|ホーム|홈|الرئيسية|Trang chủ|Start")
+	A("Estilo", "Style|Estilo|Style|Stil|Stile|Стиль|Stil|Gaya|样式|スタイル|스타일|النمط|Giao diện|Styl")
+	A("Painel", "Panel|Panel|Panneau|Panel|Pannello|Панель|Panel|Panel|面板|パネル|패널|اللوحة|Bảng|Panel")
+	A("Abas", "Tabs|Pestañas|Onglets|Tabs|Schede|Вкладки|Sekmeler|Tab|标签页|タブ|탭|علامات التبويب|Thẻ|Karty")
+	A("Botões", "Buttons|Botones|Boutons|Schaltflächen|Pulsanti|Кнопки|Düğmeler|Tombol|按钮|ボタン|버튼|الأزرار|Nút|Przyciski")
+	A("Partículas", "Particles|Partículas|Particules|Partikel|Particelle|Частицы|Parçacıklar|Partikel|粒子|パーティクル|파티클|الجسيمات|Hạt|Cząsteczki")
+	A("Atalhos", "Shortcuts|Atajos|Raccourcis|Kürzel|Scorciatoie|Горячие клавиши|Kısayollar|Pintasan|快捷键|ショートカット|단축키|الاختصارات|Phím tắt|Skróty")
+	A("Config", "Settings|Ajustes|Réglages|Einstellungen|Impostazioni|Настройки|Ayarlar|Pengaturan|设置|設定|설정|الإعدادات|Cài đặt|Ustawienia")
+	A("Mapa", "Map|Mapa|Carte|Karte|Mappa|Карта|Harita|Peta|地图|マップ|지도|الخريطة|Bản đồ|Mapa")
+	A("Comandos", "Commands|Comandos|Commandes|Befehle|Comandi|Команды|Komutlar|Perintah|命令|コマンド|명령어|الأوامر|Lệnh|Polecenia")
+	A("Filtros", "Filters|Filtros|Filtres|Filter|Filtri|Фильтры|Filtreler|Filter|滤镜|フィルター|필터|المرشحات|Bộ lọc|Filtry")
+	A("Jogadores", "Players|Jugadores|Joueurs|Spieler|Giocatori|Игроки|Oyuncular|Pemain|玩家|プレイヤー|플레이어|اللاعبون|Người chơi|Gracze")
+	A("Servidores", "Servers|Servidores|Serveurs|Server|Server|Серверы|Sunucular|Server|服务器|サーバー|서버|الخوادم|Máy chủ|Serwery")
+	A("Frutas", "Fruits|Frutas|Fruits|Früchte|Frutti|Фрукты|Meyveler|Buah|水果|フルーツ|과일|الفواكه|Trái cây|Owoce")
+	A("Automação", "Automation|Automatización|Automatisation|Automatisierung|Automazione|Автоматизация|Otomasyon|Otomasi|自动化|自動化|자동화|الأتمتة|Tự động hóa|Automatyzacja")
+	A("Ferramentas", "Tools|Herramientas|Outils|Werkzeuge|Strumenti|Инструменты|Araçlar|Alat|工具|ツール|도구|الأدوات|Công cụ|Narzędzia")
+	A("Efeitos", "Effects|Efectos|Effets|Effekte|Effetti|Эффекты|Efektler|Efek|特效|エフェクト|효과|التأثيرات|Hiệu ứng|Efekty")
+	A("Metas", "Goals|Metas|Objectifs|Ziele|Obiettivi|Цели|Hedefler|Target|目标|目標|목표|الأهداف|Mục tiêu|Cele")
+	A("Loja", "Shop|Tienda|Boutique|Shop|Negozio|Магазин|Mağaza|Toko|商店|ショップ|상점|المتجر|Cửa hàng|Sklep")
+	A("Inventário", "Inventory|Inventario|Inventaire|Inventar|Inventario|Инвентарь|Envanter|Inventaris|背包|インベントリ|인벤토리|المخزون|Kho đồ|Ekwipunek")
+	A("Lembretes", "Reminders|Recordatorios|Rappels|Erinnerungen|Promemoria|Напоминания|Hatırlatıcılar|Pengingat|提醒|リマインダー|알림|التذكيرات|Nhắc nhở|Przypomnienia")
+	A("Sessão", "Session|Sesión|Session|Sitzung|Sessione|Сессия|Oturum|Sesi|会话|セッション|세션|الجلسة|Phiên|Sesja")
+	A("Monitor", "Monitor|Monitor|Moniteur|Monitor|Monitor|Монитор|Monitör|Monitor|监控|モニター|모니터|المراقب|Giám sát|Monitor")
+	A("Teleport", "Teleport|Teletransporte|Téléportation|Teleport|Teletrasporto|Телепорт|Işınlanma|Teleportasi|传送|テレポート|텔레포트|الانتقال|Dịch chuyển|Teleport")
+	A("Player", "Player|Jugador|Joueur|Spieler|Giocatore|Игрок|Oyuncu|Pemain|玩家|プレイヤー|플레이어|اللاعب|Nhân vật|Gracz")
+	A("Info", "Info|Info|Infos|Info|Info|Инфо|Bilgi|Info|信息|情報|정보|معلومات|Thông tin|Info")
+	A("Visual", "Visual|Visual|Visuel|Optik|Visivo|Визуал|Görsel|Visual|视觉|ビジュアル|비주얼|المرئيات|Hình ảnh|Wizualne")
+	A("Stats", "Stats|Estadísticas|Statistiques|Statistiken|Statistiche|Статистика|İstatistik|Statistik|统计|統計|통계|الإحصائيات|Thống kê|Statystyki")
+	A("Layouts", "Layouts|Diseños|Dispositions|Layouts|Layout|Макеты|Düzenler|Tata letak|布局|レイアウト|레이아웃|التخطيطات|Bố cục|Układy")
+	A("Idioma", "Language|Idioma|Langue|Sprache|Lingua|Язык|Dil|Bahasa|语言|言語|언어|اللغة|Ngôn ngữ|Język")
+	A("Diagnóstico", "Diagnostics|Diagnóstico|Diagnostic|Diagnose|Diagnostica|Диагностика|Tanılama|Diagnostik|诊断|診断|진단|التشخيص|Chẩn đoán|Diagnostyka")
+	-- seções
+	A("Auto Level (com quests)", "Auto Level (with quests)|Auto Nivel (con misiones)|Auto Niveau (avec quêtes)|Auto-Level (mit Quests)|Auto Livello (con missioni)|Авто-уровень (с квестами)|Otomatik Seviye (görevlerle)|Auto Level (dengan quest)|自动升级（含任务）|自動レベル上げ（クエスト付き）|자동 레벨업(퀘스트 포함)|ترقية تلقائية (مع المهام)|Tự lên cấp (có nhiệm vụ)|Auto Level (z questami)")
+	A("Farm manual", "Manual farm|Farm manual|Farm manuel|Manuelles Farmen|Farm manuale|Ручной фарм|Manuel farm|Farm manual|手动刷怪|手動ファーム|수동 파밍|فارم يدوي|Farm thủ công|Farm ręczny")
+	A("Ataque", "Attack|Ataque|Attaque|Angriff|Attacco|Атака|Saldırı|Serangan|攻击|攻撃|공격|الهجوم|Tấn công|Atak")
+	A("Coleta", "Collection|Recolección|Collecte|Sammeln|Raccolta|Сбор|Toplama|Pengumpulan|采集|収集|수집|الجمع|Thu thập|Zbieranie")
+	A("Combate", "Combat|Combate|Combat|Kampf|Combattimento|Бой|Savaş|Pertempuran|战斗|戦闘|전투|القتال|Chiến đấu|Walka")
+	A("Skills automáticas", "Auto skills|Habilidades automáticas|Compétences automatiques|Automatische Fähigkeiten|Abilità automatiche|Авто-скиллы|Otomatik yetenekler|Skill otomatis|自动技能|自動スキル|자동 스킬|مهارات تلقائية|Kỹ năng tự động|Automatyczne umiejętności")
+	A("Compras", "Purchases|Compras|Achats|Käufe|Acquisti|Покупки|Satın almalar|Pembelian|购买|購入|구매|المشتريات|Mua sắm|Zakupy")
+	A("Códigos", "Codes|Códigos|Codes|Codes|Codici|Коды|Kodlar|Kode|兑换码|コード|코드|الأكواد|Mã code|Kody")
+	A("Conta", "Account|Cuenta|Compte|Konto|Account|Аккаунт|Hesap|Akun|账号|アカウント|계정|الحساب|Tài khoản|Konto")
+	A("Mares", "Seas|Mares|Mers|Meere|Mari|Моря|Denizler|Laut|海域|海|바다|البحار|Các biển|Morza")
+	A("Utilidades", "Utilities|Utilidades|Utilitaires|Hilfsmittel|Utilità|Утилиты|Yardımcılar|Utilitas|实用工具|ユーティリティ|유틸리티|أدوات مساعدة|Tiện ích|Narzędzia pomocnicze")
+	A("Ambiente", "Environment|Ambiente|Environnement|Umgebung|Ambiente|Окружение|Ortam|Lingkungan|环境|環境|환경|البيئة|Môi trường|Środowisko")
+	A("Desempenho", "Performance|Rendimiento|Performance|Leistung|Prestazioni|Производительность|Performans|Performa|性能|パフォーマンス|성능|الأداء|Hiệu năng|Wydajność")
+	A("Movimento", "Movement|Movimiento|Mouvement|Bewegung|Movimento|Движение|Hareket|Gerakan|移动|移動|이동|الحركة|Di chuyển|Ruch")
+	A("Temas", "Themes|Temas|Thèmes|Designs|Temi|Темы|Temalar|Tema|主题|テーマ|테마|السمات|Chủ đề|Motywy")
+	A("Cor personalizada", "Custom color|Color personalizado|Couleur personnalisée|Eigene Farbe|Colore personalizzato|Свой цвет|Özel renk|Warna kustom|自定义颜色|カスタムカラー|사용자 지정 색상|لون مخصص|Màu tùy chỉnh|Kolor niestandardowy")
+	A("Fonte do painel", "Panel font|Fuente del panel|Police du panneau|Panel-Schriftart|Carattere del pannello|Шрифт панели|Panel yazı tipi|Font panel|面板字体|パネルのフォント|패널 글꼴|خط اللوحة|Phông chữ bảng|Czcionka panelu")
+	A("Fundo", "Background|Fondo|Arrière-plan|Hintergrund|Sfondo|Фон|Arka plan|Latar belakang|背景|背景|배경|الخلفية|Nền|Tło")
+	A("Bordas", "Borders|Bordes|Bordures|Rahmen|Bordi|Границы|Kenarlıklar|Garis tepi|边框|枠線|테두리|الحدود|Viền|Obramowania")
+	A("Janela", "Window|Ventana|Fenêtre|Fenster|Finestra|Окно|Pencere|Jendela|窗口|ウィンドウ|창|النافذة|Cửa sổ|Okno")
+	A("Notificações", "Notifications|Notificaciones|Notifications|Benachrichtigungen|Notifiche|Уведомления|Bildirimler|Notifikasi|通知|通知|알림|الإشعارات|Thông báo|Powiadomienia")
+	A("Restaurar", "Restore|Restaurar|Restaurer|Wiederherstellen|Ripristina|Восстановление|Geri yükle|Pulihkan|恢复|復元|복원|استعادة|Khôi phục|Przywracanie")
+	A("Configuração", "Configuration|Configuración|Configuration|Konfiguration|Configurazione|Конфигурация|Yapılandırma|Konfigurasi|配置|設定|설정|التكوين|Cấu hình|Konfiguracja")
+	A("Compartilhar", "Share|Compartir|Partager|Teilen|Condividi|Поделиться|Paylaş|Bagikan|分享|共有|공유|مشاركة|Chia sẻ|Udostępnij")
+	A("Resumo", "Summary|Resumen|Résumé|Zusammenfassung|Riepilogo|Сводка|Özet|Ringkasan|概览|概要|요약|ملخص|Tóm tắt|Podsumowanie")
+	-- funções
+	A("Auto Level + Quest automática", "Auto Level + automatic quest|Auto Nivel + misión automática|Auto Niveau + quête automatique|Auto-Level + automatische Quest|Auto Livello + missione automatica|Авто-уровень + авто-квест|Otomatik Seviye + otomatik görev|Auto Level + quest otomatis|自动升级 + 自动任务|自動レベル上げ + 自動クエスト|자동 레벨업 + 자동 퀘스트|ترقية تلقائية + مهمة تلقائية|Tự lên cấp + nhiệm vụ tự động|Auto Level + automatyczny quest")
+	A("Auto Farm (mob mais próximo)", "Auto Farm (nearest mob)|Auto Farm (mob más cercano)|Auto Farm (monstre le plus proche)|Auto-Farm (nächster Mob)|Auto Farm (mob più vicino)|Авто-фарм (ближайший моб)|Otomatik Farm (en yakın canavar)|Auto Farm (mob terdekat)|自动刷怪（最近的怪）|自動ファーム（最寄りのモブ）|자동 파밍(가장 가까운 몹)|فارم تلقائي (أقرب وحش)|Tự farm (quái gần nhất)|Auto Farm (najbliższy mob)")
+	A("Auto Boss (se estiver no mapa)", "Auto Boss (if on the map)|Auto Jefe (si está en el mapa)|Auto Boss (s'il est sur la carte)|Auto-Boss (falls auf der Karte)|Auto Boss (se è sulla mappa)|Авто-босс (если на карте)|Otomatik Boss (haritadaysa)|Auto Boss (jika ada di peta)|自动打Boss（地图上有时）|自動ボス（マップにいる場合）|자동 보스(맵에 있을 때)|بوس تلقائي (إن وُجد في الخريطة)|Tự đánh Boss (nếu có trên bản đồ)|Auto Boss (jeśli jest na mapie)")
+	A("Auto Click rápido", "Fast Auto Click|Auto Clic rápido|Clic auto rapide|Schneller Auto-Klick|Auto Click veloce|Быстрый автоклик|Hızlı Otomatik Tık|Auto Klik cepat|快速连点|高速オートクリック|빠른 자동 클릭|نقر تلقائي سريع|Tự click nhanh|Szybki auto-klik")
+	A("Auto Baús", "Auto Chests|Auto Cofres|Auto Coffres|Auto-Truhen|Auto Forzieri|Авто-сундуки|Otomatik Sandıklar|Auto Peti|自动宝箱|自動チェスト|자동 상자|صناديق تلقائية|Tự nhặt rương|Auto Skrzynie")
+	A("Auto Pegar Frutas", "Auto Collect Fruits|Auto Recoger Frutas|Auto Ramasser Fruits|Auto-Früchte sammeln|Auto Raccogli Frutti|Авто-сбор фруктов|Otomatik Meyve Topla|Auto Ambil Buah|自动拾取水果|自動フルーツ回収|자동 과일 줍기|جمع الفواكه تلقائيًا|Tự nhặt trái cây|Auto zbieranie owoców")
+	A("Puxar mobs (Bring Mobs)", "Pull mobs (Bring Mobs)|Atraer mobs (Bring Mobs)|Attirer les monstres (Bring Mobs)|Mobs heranziehen (Bring Mobs)|Attira i mob (Bring Mobs)|Притягивать мобов (Bring Mobs)|Canavarları çek (Bring Mobs)|Tarik mob (Bring Mobs)|聚怪（Bring Mobs）|モブを引き寄せる (Bring Mobs)|몹 끌어오기 (Bring Mobs)|سحب الوحوش (Bring Mobs)|Kéo quái (Bring Mobs)|Przyciągaj moby (Bring Mobs)")
+	A("Modo seguro (sobe se HP baixo)", "Safe mode (rises if HP is low)|Modo seguro (sube si hay poca vida)|Mode sûr (monte si PV bas)|Sicherer Modus (steigt bei wenig HP)|Modalità sicura (sale se HP basso)|Безопасный режим (поднимается при низком HP)|Güvenli mod (can azsa yükselir)|Mode aman (naik jika HP rendah)|安全模式（血量低时升空）|セーフモード（HPが低いと上昇）|안전 모드(체력 낮으면 상승)|الوضع الآمن (يصعد عند انخفاض الصحة)|Chế độ an toàn (bay lên khi HP thấp)|Tryb bezpieczny (wzbija się przy niskim HP)")
+	A("Usar skills automaticamente", "Use skills automatically|Usar habilidades automáticamente|Utiliser les compétences automatiquement|Fähigkeiten automatisch nutzen|Usa le abilità automaticamente|Авто-использование скиллов|Yetenekleri otomatik kullan|Gunakan skill otomatis|自动使用技能|スキルを自動使用|스킬 자동 사용|استخدام المهارات تلقائيًا|Tự dùng kỹ năng|Używaj umiejętności automatycznie")
+	A("Voar", "Fly|Volar|Voler|Fliegen|Vola|Полёт|Uç|Terbang|飞行|飛行|비행|الطيران|Bay|Latanie")
+	A("Pulo infinito", "Infinite jump|Salto infinito|Saut infini|Unendlicher Sprung|Salto infinito|Бесконечный прыжок|Sonsuz zıplama|Lompat tak terbatas|无限跳|無限ジャンプ|무한 점프|قفز لا نهائي|Nhảy vô hạn|Nieskończony skok")
+	A("Velocidade personalizada", "Custom speed|Velocidad personalizada|Vitesse personnalisée|Eigene Geschwindigkeit|Velocità personalizzata|Своя скорость|Özel hız|Kecepatan kustom|自定义速度|カスタム速度|사용자 지정 속도|سرعة مخصصة|Tốc độ tùy chỉnh|Własna prędkość")
+	A("Velocidade", "Speed|Velocidad|Vitesse|Geschwindigkeit|Velocità|Скорость|Hız|Kecepatan|速度|速度|속도|السرعة|Tốc độ|Prędkość")
+	A("Gravidade", "Gravity|Gravedad|Gravité|Schwerkraft|Gravità|Гравитация|Yerçekimi|Gravitasi|重力|重力|중력|الجاذبية|Trọng lực|Grawitacja")
+	A("ESP Jogadores", "ESP Players|ESP Jugadores|ESP Joueurs|ESP Spieler|ESP Giocatori|ESP игроков|ESP Oyuncular|ESP Pemain|玩家透视|プレイヤーESP|플레이어 ESP|ESP اللاعبين|ESP người chơi|ESP graczy")
+	A("ESP Frutas", "ESP Fruits|ESP Frutas|ESP Fruits|ESP Früchte|ESP Frutti|ESP фруктов|ESP Meyveler|ESP Buah|水果透视|フルーツESP|과일 ESP|ESP الفواكه|ESP trái cây|ESP owoców")
+	A("ESP Baús", "ESP Chests|ESP Cofres|ESP Coffres|ESP Truhen|ESP Forzieri|ESP сундуков|ESP Sandıklar|ESP Peti|宝箱透视|チェストESP|상자 ESP|ESP الصناديق|ESP rương|ESP skrzyń")
+	A("ESP Bosses", "ESP Bosses|ESP Jefes|ESP Boss|ESP Bosse|ESP Boss|ESP боссов|ESP Bosslar|ESP Boss|Boss透视|ボスESP|보스 ESP|ESP الزعماء|ESP Boss|ESP bossów")
+	A("Fullbright (claridade)", "Fullbright (brightness)|Fullbright (claridad)|Fullbright (luminosité)|Fullbright (Helligkeit)|Fullbright (luminosità)|Fullbright (яркость)|Fullbright (parlaklık)|Fullbright (kecerahan)|全亮（增亮）|フルブライト（明るさ）|풀브라이트(밝기)|إضاءة كاملة|Fullbright (độ sáng)|Fullbright (jasność)")
+	A("Remover neblina", "Remove fog|Quitar niebla|Supprimer le brouillard|Nebel entfernen|Rimuovi nebbia|Убрать туман|Sisi kaldır|Hapus kabut|去除雾气|霧を消す|안개 제거|إزالة الضباب|Xóa sương mù|Usuń mgłę")
+	A("Modo desempenho (menos lag)", "Performance mode (less lag)|Modo rendimiento (menos lag)|Mode performance (moins de lag)|Leistungsmodus (weniger Lag)|Modalità prestazioni (meno lag)|Режим производительности (меньше лагов)|Performans modu (daha az lag)|Mode performa (lebih sedikit lag)|性能模式（减少卡顿）|パフォーマンスモード（ラグ軽減）|성능 모드(렉 감소)|وضع الأداء (تقليل التأخر)|Chế độ hiệu năng (ít lag)|Tryb wydajności (mniej lagów)")
+	A("Reconectar automaticamente se cair", "Auto reconnect if disconnected|Reconectar automáticamente si se cae|Reconnexion automatique en cas de coupure|Bei Abbruch automatisch neu verbinden|Riconnetti automaticamente se cade|Авто-переподключение при вылете|Düşerse otomatik yeniden bağlan|Sambung ulang otomatis jika terputus|掉线自动重连|切断時に自動再接続|끊기면 자동 재접속|إعادة الاتصال تلقائيًا عند الانقطاع|Tự kết nối lại khi mất kết nối|Automatyczne łączenie po rozłączeniu")
+	A("Tela preta (economiza bateria/GPU)", "Black screen (saves battery/GPU)|Pantalla negra (ahorra batería/GPU)|Écran noir (économise batterie/GPU)|Schwarzer Bildschirm (spart Akku/GPU)|Schermo nero (risparmia batteria/GPU)|Чёрный экран (экономит батарею/GPU)|Siyah ekran (pil/GPU tasarrufu)|Layar hitam (hemat baterai/GPU)|黑屏（省电/省GPU）|黒画面（バッテリー/GPU節約）|검은 화면(배터리/GPU 절약)|شاشة سوداء (توفر البطارية/GPU)|Màn hình đen (tiết kiệm pin/GPU)|Czarny ekran (oszczędza baterię/GPU)")
+	A("Mostrar notificações", "Show notifications|Mostrar notificaciones|Afficher les notifications|Benachrichtigungen anzeigen|Mostra notifiche|Показывать уведомления|Bildirimleri göster|Tampilkan notifikasi|显示通知|通知を表示|알림 표시|إظهار الإشعارات|Hiện thông báo|Pokaż powiadomienia")
+	A("Trocar de servidor", "Switch server|Cambiar de servidor|Changer de serveur|Server wechseln|Cambia server|Сменить сервер|Sunucu değiştir|Ganti server|切换服务器|サーバー移動|서버 이동|تغيير الخادم|Đổi máy chủ|Zmień serwer")
+	A("Reentrar no servidor", "Rejoin server|Reentrar al servidor|Rejoindre à nouveau|Server neu betreten|Rientra nel server|Перезайти на сервер|Sunucuya yeniden gir|Masuk ulang server|重新进入服务器|サーバーに再参加|서버 재접속|إعادة دخول الخادم|Vào lại máy chủ|Dołącz ponownie")
+	A("Resetar personagem", "Reset character|Reiniciar personaje|Réinitialiser le personnage|Charakter zurücksetzen|Reimposta personaggio|Сбросить персонажа|Karakteri sıfırla|Reset karakter|重置角色|キャラをリセット|캐릭터 리셋|إعادة تعيين الشخصية|Đặt lại nhân vật|Zresetuj postać")
+	A("Primeiro Mar", "First Sea|Primer Mar|Première Mer|Erstes Meer|Primo Mare|Первое море|Birinci Deniz|Laut Pertama|第一海|第一の海|첫 번째 바다|البحر الأول|Biển thứ nhất|Pierwsze Morze")
+	A("Segundo Mar", "Second Sea|Segundo Mar|Deuxième Mer|Zweites Meer|Secondo Mare|Второе море|İkinci Deniz|Laut Kedua|第二海|第二の海|두 번째 바다|البحر الثاني|Biển thứ hai|Drugie Morze")
+	A("Terceiro Mar", "Third Sea|Tercer Mar|Troisième Mer|Drittes Meer|Terzo Mare|Третье море|Üçüncü Deniz|Laut Ketiga|第三海|第三の海|세 번째 바다|البحر الثالث|Biển thứ ba|Trzecie Morze")
+	A("Salvar aparência e ajustes", "Save appearance and settings|Guardar apariencia y ajustes|Enregistrer l'apparence et les réglages|Aussehen und Einstellungen speichern|Salva aspetto e impostazioni|Сохранить внешний вид и настройки|Görünümü ve ayarları kaydet|Simpan tampilan dan pengaturan|保存外观和设置|外観と設定を保存|외형과 설정 저장|حفظ المظهر والإعدادات|Lưu giao diện và cài đặt|Zapisz wygląd i ustawienia")
+	A("Apagar config salva", "Delete saved config|Borrar config guardada|Supprimer la config enregistrée|Gespeicherte Konfig löschen|Elimina config salvata|Удалить сохранённый конфиг|Kayıtlı ayarı sil|Hapus konfigurasi tersimpan|删除已保存配置|保存した設定を削除|저장된 설정 삭제|حذف الإعدادات المحفوظة|Xóa cấu hình đã lưu|Usuń zapisaną konfigurację")
+	A("Descarregar hub", "Unload hub|Descargar hub|Décharger le hub|Hub entladen|Scarica hub|Выгрузить хаб|Hub'ı kapat|Tutup hub|卸载脚本|ハブを終了|허브 종료|إغلاق الهب|Tắt hub|Wyładuj hub")
+	A("Restaurar visual padrão", "Restore default look|Restaurar apariencia predeterminada|Restaurer l'apparence par défaut|Standard-Aussehen wiederherstellen|Ripristina aspetto predefinito|Восстановить вид по умолчанию|Varsayılan görünümü geri yükle|Pulihkan tampilan default|恢复默认外观|デフォルトの外観に戻す|기본 외형 복원|استعادة المظهر الافتراضي|Khôi phục giao diện mặc định|Przywróć domyślny wygląd")
+	A("▶ Testar intro agora", "▶ Test intro now|▶ Probar intro ahora|▶ Tester l'intro|▶ Intro jetzt testen|▶ Prova l'intro ora|▶ Проверить интро|▶ Introyu şimdi dene|▶ Tes intro sekarang|▶ 立即测试开场|▶ イントロをテスト|▶ 인트로 테스트|▶ جرّب المقدمة الآن|▶ Thử intro ngay|▶ Testuj intro teraz")
+	A("Atualizar lista", "Refresh list|Actualizar lista|Actualiser la liste|Liste aktualisieren|Aggiorna elenco|Обновить список|Listeyi yenile|Segarkan daftar|刷新列表|リストを更新|목록 새로고침|تحديث القائمة|Làm mới danh sách|Odśwież listę")
+	A("Atualizar estoque", "Refresh stock|Actualizar stock|Actualiser le stock|Bestand aktualisieren|Aggiorna scorte|Обновить ассортимент|Stoğu yenile|Segarkan stok|刷新库存|在庫を更新|재고 새로고침|تحديث المخزون|Làm mới kho|Odśwież zapasy")
+	A("Tema aleatório", "Random theme|Tema aleatorio|Thème aléatoire|Zufälliges Design|Tema casuale|Случайная тема|Rastgele tema|Tema acak|随机主题|ランダムテーマ|무작위 테마|سمة عشوائية|Chủ đề ngẫu nhiên|Losowy motyw")
+	A("Buscar...", "Search...|Buscar...|Rechercher...|Suchen...|Cerca...|Поиск...|Ara...|Cari...|搜索...|検索...|검색...|بحث...|Tìm kiếm...|Szukaj...")
+	-- intro e avisos
+	A("Iniciando...", "Starting...|Iniciando...|Démarrage...|Starte...|Avvio...|Запуск...|Başlatılıyor...|Memulai...|正在启动...|起動中...|시작 중...|جارٍ البدء...|Đang khởi động...|Uruchamianie...")
+	A("Carregando módulos...", "Loading modules...|Cargando módulos...|Chargement des modules...|Module werden geladen...|Caricamento moduli...|Загрузка модулей...|Modüller yükleniyor...|Memuat modul...|正在加载模块...|モジュールを読み込み中...|모듈 불러오는 중...|جارٍ تحميل الوحدات...|Đang tải mô-đun...|Ładowanie modułów...")
+	A("Sincronizando Blox Fruits...", "Syncing Blox Fruits...|Sincronizando Blox Fruits...|Synchronisation de Blox Fruits...|Blox Fruits wird synchronisiert...|Sincronizzazione Blox Fruits...|Синхронизация Blox Fruits...|Blox Fruits eşitleniyor...|Menyinkronkan Blox Fruits...|正在同步 Blox Fruits...|Blox Fruits を同期中...|Blox Fruits 동기화 중...|جارٍ مزامنة Blox Fruits...|Đang đồng bộ Blox Fruits...|Synchronizacja Blox Fruits...")
+	A("Aplicando tema...", "Applying theme...|Aplicando tema...|Application du thème...|Design wird angewendet...|Applicazione tema...|Применение темы...|Tema uygulanıyor...|Menerapkan tema...|正在应用主题...|テーマを適用中...|테마 적용 중...|جارٍ تطبيق السمة...|Đang áp dụng chủ đề...|Stosowanie motywu...")
+	A("Pronto!", "Ready!|¡Listo!|Prêt !|Fertig!|Pronto!|Готово!|Hazır!|Siap!|完成！|準備完了！|완료!|جاهز!|Xong!|Gotowe!")
+	A("toque para pular", "tap to skip|toca para saltar|touchez pour passer|tippen zum Überspringen|tocca per saltare|нажмите, чтобы пропустить|atlamak için dokun|ketuk untuk lewati|点击跳过|タップでスキップ|탭하여 건너뛰기|المس للتخطي|chạm để bỏ qua|dotknij, aby pominąć")
+	A("Carregado! Bom jogo ✦", "Loaded! Have fun ✦|¡Cargado! Buen juego ✦|Chargé ! Bon jeu ✦|Geladen! Viel Spaß ✦|Caricato! Buon gioco ✦|Загружено! Приятной игры ✦|Yüklendi! İyi oyunlar ✦|Termuat! Selamat bermain ✦|已加载！祝你游戏愉快 ✦|読み込み完了！楽しんで ✦|로드 완료! 즐거운 게임 되세요 ✦|تم التحميل! لعبًا ممتعًا ✦|Đã tải xong! Chơi vui nhé ✦|Załadowano! Miłej gry ✦")
+
+	------------------------------------------------------------------
+	-- MOTOR DE TRADUÇÃO (traduz o hub inteiro, ao vivo)
+	------------------------------------------------------------------
+	local cur = genv.AppleHubLang or "pt"
+	local idx, stamp = nil, 0
+	local function langIdx(code)
+		if code == "pt" then return nil end
+		for _, l in ipairs(LANGS) do if l[1] == code then return LIDX[l[4]] or 1 end end
+		return 1
+	end
+	idx = langIdx(cur)
+
+	local function entryFor(text)
+		local e = DICT[norm(text)]
+		if e then return e, nil end
+		local pre, rest = text:match("^(.-  )(.+)$")
+		if not pre then pre, rest = text:match("^([^%w%s]+%s+)(.+)$") end
+		if rest then
+			e = DICT[norm(rest)]
+			if e then return e, pre end
+		end
+		return nil
+	end
+	local function translate(text)
+		if not idx or type(text) ~= "string" or text == "" then return nil end
+		local e, pre = entryFor(text)
+		local t = e and e[idx]
+		if not t then return nil end
+		if pre then t = pre .. t end
+		if text == string.upper(text) and text ~= string.lower(text) then t = string.upper(t) end
+		return t
+	end
+
+	local recs = setmetatable({}, {__mode = "k"})
+	local function hook(inst)
+		if recs[inst] then return end
+		local prop
+		if inst:IsA("TextBox") then prop = "PlaceholderText"
+		elseif inst:IsA("TextLabel") or inst:IsA("TextButton") then prop = "Text"
+		else return end
+		local rec = {txt = inst[prop]}
+		recs[inst] = rec
+		local function upd()
+			local want = translate(rec.txt) or rec.txt
+			if inst[prop] ~= want then rec.shown = want; inst[prop] = want end
+		end
+		rec.upd = upd
+		inst:GetPropertyChangedSignal(prop):Connect(function()
+			local v = inst[prop]
+			if v == rec.shown then return end
+			rec.txt = v
+			upd()
+		end)
+		upd()
+	end
+	for _, d in ipairs(gui:GetDescendants()) do pcall(hook, d) end
+	conn(gui.DescendantAdded:Connect(function(d) pcall(hook, d) end))
+
+	L.set = function(code, silent)
+		local found
+		for _, l in ipairs(LANGS) do if l[1] == code then found = l end end
+		if not found then return end
+		cur = code
+		genv.AppleHubLang = code
+		if genv.AppleHubSaveLang then pcall(genv.AppleHubSaveLang, code) end
+		idx = langIdx(code)
+		stamp = stamp + 1
+		for _, rec in pairs(recs) do pcall(rec.upd) end
+		if L.refreshStrokes then L.refreshStrokes() end
+		if not silent then notify("Apple Hub", "✦ " .. found[2] .. "  •  " .. found[3], 2.5) end
+	end
+
+	-- busca também acha o texto traduzido
+	applySearch = function(q)
+		q = string.lower(q or "")
+		for _, it in ipairs(searchItems) do
+			pcall(function()
+				if q == "" then it.f.Visible = true
+				elseif it.s then it.f.Visible = false
+				else
+					if it.stamp ~= stamp then
+						it.stamp = stamp
+						local e = idx and DICT[it.t]
+						it.t2 = (e and e[idx]) and string.lower(e[idx]) or nil
+					end
+					it.f.Visible = (it.t:find(q, 1, true) ~= nil) or (it.t2 ~= nil and it.t2:find(q, 1, true) ~= nil)
+				end
+			end)
+		end
+	end
+
+	local tt = tostring(State.Title)
+	if State.Title == Default.Title or tt:find("v40", 1, true) or tt:find("v30", 1, true) or tt:find("v26", 1, true) or tt:find("v16", 1, true) then
+		State.Title = "Apple Hub v50  •  Blox Fruits"
+		titleLabel.Text = State.Title
+	end
+
+	------------------------------------------------------------------
+	-- PÁGINA: IDIOMA
+	------------------------------------------------------------------
+	local function newPage(name, icon)
+		if G.Z and G.Z.pages then G.Z.pages[name] = true end
+		return addPage(name, icon)
+	end
+	local pLang = newPage("Idioma", "✆")
+	State.AskLang = genv.AppleHubAskLang and genv.AppleHubAskLang() or false
+	Section(pLang, "Language / Idioma")
+	local g = Grid(pLang, 134, 46)
+	local strokes = {}
+	for _, l in ipairs(LANGS) do
+		local b = new("TextButton", {BackgroundColor3 = T.row, Text = "", AutoButtonColor = false, Parent = g}, {rc(11)})
+		bind(b, "BackgroundColor3", "row")
+		mkText({Size = UDim2.new(1, -8, 0, 22), Position = UDim2.fromOffset(6, 4), Text = l[2], TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd, Parent = b}, true)
+		mkText({Size = UDim2.new(1, -8, 0, 14), Position = UDim2.fromOffset(6, 27), Text = l[3] .. ((l[4] == "en" and l[1] ~= "en" and l[1] ~= "pt") and "  •  UI: EN" or ""),
+			TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = b}, false, "sub")
+		local st = new("UIStroke", {Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Enabled = (cur == l[1]), Parent = b})
+		bind(st, "Color", "accent")
+		strokes[l[1]] = st
+		b.MouseButton1Click:Connect(function() uiSound(); L.set(l[1]) end)
+	end
+	L.refreshStrokes = function() for c, s in pairs(strokes) do s.Enabled = (c == cur) end end
+	Label(pLang, "Languages marked UI: EN use English menus (full translation for the other 14). / Idiomas com UI: EN usam o menu em inglês.")
+	Toggle(pLang, "Ask language on startup / Perguntar o idioma ao iniciar", "AskLang", function(v)
+		if genv.AppleHubSetAsk then genv.AppleHubSetAsk(v) end
+	end)
+	if genv.AppleHubPickLang then
+		Button(pLang, "Open the language screen / Abrir a tela de idioma", function()
+			genv.AppleHubPickLang(function(c) L.set(c, true) end)
+		end)
+	end
+	InfoRow(pLang, "Detected / Detectado", function()
+		local d = genv.AppleHubDetect and genv.AppleHubDetect() or "en"
+		for _, l in ipairs(LANGS) do if l[1] == d then return l[2] end end
+		return d
+	end)
+	InfoRow(pLang, "Current / Atual", function()
+		for _, l in ipairs(LANGS) do if l[1] == cur then return l[2] end end
+		return cur
+	end)
+	Button(pLang, "Copy untranslated texts / Copiar textos sem tradução", function()
+		local seen, out = {}, {}
+		for _, rec in pairs(recs) do
+			local s = rec.txt
+			if type(s) == "string" and s ~= "" and not seen[s] and s:find("%a") and not entryFor(s) then
+				seen[s] = true
+				table.insert(out, s)
+			end
+		end
+		table.sort(out)
+		pcall(function() setclipboard(table.concat(out, "\n")) end)
+		notify("Apple Hub", #out .. " texts copied", 3)
+	end)
+
+	------------------------------------------------------------------
+	-- PÁGINA: DIAGNÓSTICO
+	------------------------------------------------------------------
+	local pDiag = newPage("Diagnóstico", "✚")
+	local function yes(v) return v and "✔" or "✘" end
+	local checks = {
+		{"writefile / readfile", function() return writefile ~= nil and readfile ~= nil end},
+		{"isfile / delfile", function() return isfile ~= nil and delfile ~= nil end},
+		{"setclipboard", function() return setclipboard ~= nil end},
+		{"request / http_request", function() return (request or http_request or (syn and syn.request) or (http and http.request)) ~= nil end},
+		{"queue_on_teleport", function() return (queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)) ~= nil end},
+		{"Drawing", function() return Drawing ~= nil end},
+		{"gethui", function() return gethui ~= nil end},
+		{"sethiddenproperty", function() return sethiddenproperty ~= nil end},
+		{"setfpscap", function() return setfpscap ~= nil end},
+		{"identifyexecutor", function() return identifyexecutor ~= nil end},
+		{"loadstring", function() return loadstring ~= nil end},
+		{"VirtualInputManager", function() return VIM ~= nil end},
+	}
+	local partsList = {
+		{"Part 0 (idioma / language)", function() return genv.AppleHubLangs ~= nil end},
+		{"Parts 1+2 (v9)", function() return G ~= nil end},
+		{"Part 3 (v16)", function() return G.V ~= nil end},
+		{"Part 4 (v26)", function() return G.Z ~= nil end},
+		{"Part 5 (v30)", function() return G.Y ~= nil end},
+		{"Part 6 (v40)", function() return G.W ~= nil end},
+		{"Part 7 (v50)", function() return true end},
+	}
+	Section(pDiag, "Executor")
+	InfoRow(pDiag, "Executor", function() local ok, n = pcall(identifyexecutor) return ok and tostring(n) or "?" end)
+	for _, c in ipairs(checks) do
+		InfoRow(pDiag, c[1], function() local ok, v = pcall(c[2]) return yes(ok and v) end)
+	end
+	Section(pDiag, "Script parts")
+	for _, p in ipairs(partsList) do
+		InfoRow(pDiag, p[1], function() local ok, v = pcall(p[2]) return yes(ok and v) end)
+	end
+	Section(pDiag, "Game")
+	InfoRow(pDiag, "Locale", function()
+		local id = ""
+		pcall(function() id = game:GetService("LocalizationService").RobloxLocaleId end)
+		return tostring(id)
+	end)
+	InfoRow(pDiag, "FPS / Ping", function() return fps .. " fps  •  " .. getPing() .. " ms" end)
+	InfoRow(pDiag, "Memory", function() return math.floor(Stats:GetTotalMemoryUsageMb()) .. " MB" end)
+	local function buildReport()
+		local out = {"Apple Hub v50 — diagnostic report", "Language: " .. cur}
+		local ok, n = pcall(identifyexecutor)
+		table.insert(out, "Executor: " .. (ok and tostring(n) or "?"))
+		for _, c in ipairs(checks) do
+			local ok2, v = pcall(c[2])
+			table.insert(out, c[1] .. ": " .. yes(ok2 and v))
+		end
+		for _, p in ipairs(partsList) do
+			local ok2, v = pcall(p[2])
+			table.insert(out, p[1] .. ": " .. yes(ok2 and v))
+		end
+		table.insert(out, "FPS " .. fps .. " | Ping " .. getPing() .. " ms | Mem " .. math.floor(Stats:GetTotalMemoryUsageMb()) .. " MB")
+		return table.concat(out, "\n")
+	end
+	Button(pDiag, "Copy report / Copiar relatório", function()
+		pcall(function() setclipboard(buildReport()) end)
+		notify("Apple Hub", "Report copied", 2.5)
+	end)
+	Label(pDiag, "✔ = available / disponível   ✘ = missing / indisponível. If something fails, send the copied report. / Se algo falhar, mande o relatório copiado.")
+
+	------------------------------------------------------------------
+	-- console: comando "lang"
+	------------------------------------------------------------------
+	if G.V and G.V.run then
+		local oldRun = G.V.run
+		G.V.run = function(text)
+			local cmd, rest = tostring(text):match("^%s*(%S+)%s*(.*)$")
+			if cmd and cmd:lower() == "lang" then
+				G.V.say("> " .. text)
+				local c = rest:lower():gsub("%s", "")
+				local ok = false
+				for _, l in ipairs(LANGS) do if l[1] == c then ok = true end end
+				if ok then L.set(c, true); G.V.say("language: " .. c)
+				else G.V.say("usage: lang en | es | pt | fr | de | ja | ko | zh ...") end
+				return
+			end
+			return oldRun(text)
+		end
+	end
+
+	layoutTabs()
+	local nm = cur
+	for _, l in ipairs(LANGS) do if l[1] == cur then nm = l[2] end end
+	notify("Apple Hub v50", "✦ " .. nm, 3)
 end)()
