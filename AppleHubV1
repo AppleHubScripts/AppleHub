@@ -1,0 +1,1666 @@
+--// APPLE HUB · BLOX EDITION v1.0
+--// Painel com barra lateral (estilo Serenity) 100% focado em Blox Fruits
+if getgenv and getgenv().AppleBloxUnload then pcall(getgenv().AppleBloxUnload) end
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local TS = game:GetService("TweenService")
+local RS = game:GetService("RunService")
+local VU = game:GetService("VirtualUser")
+local VIM = game:GetService("VirtualInputManager")
+local Lighting = game:GetService("Lighting")
+local CS = game:GetService("CollectionService")
+local TPS = game:GetService("TeleportService")
+local HS = game:GetService("HttpService")
+local RepS = game:GetService("ReplicatedStorage")
+local Stats = game:GetService("Stats")
+local GuiService = game:GetService("GuiService")
+local SoundService = game:GetService("SoundService")
+local Market = game:GetService("MarketplaceService")
+local CoreGui = game:GetService("CoreGui")
+local lp = Players.LocalPlayer
+local cam = workspace.CurrentCamera
+local white = Color3.new(1, 1, 1)
+local alive, conns, t0 = true, {}, tick()
+local function track(c) conns[#conns + 1] = c return c end
+local parentGui = (gethui and gethui()) or CoreGui
+pcall(function() local o = parentGui:FindFirstChild("AppleBlox") if o then o:Destroy() end end)
+
+------------------------------------------------------------------
+-- CONFIG
+------------------------------------------------------------------
+local FILE = "AppleBlox_v1.json"
+local S = {
+	Lang = "", Accent = "Copper", Font = "Pixel", Glass = "Enhanced", ScalePct = 0, ReducedMotion = false, HideName = false,
+	DragStyle = "Smooth", Sounds = true, Volume = 100, Runes = true, RuneReact = true, ToggleKey = "RightShift",
+	AutoLevel = false, Farm = false, Weapon = "Melee", Height = 8, ClickDelay = 80, AutoEquip = true, TravelSpeed = 260, Click = false,
+	AutoBoss = false, Boss = "Saber Expert", AutoElite = false, Chest = false, FruitGrab = false,
+	Bring = false, BringR = 300, Safe = false, SafePct = 30, Skills = false, SkillDelay = 900, SkillKeys = "Z,X",
+	Buso = false, Ken = false, AutoStats = false, Stat = "Melee", StatPts = 1, AutoCodes = false, Zone = "",
+	Wish = "Leopard,Kitsune,Dragon", AutoBuy = false, AutoStore = false, FruitNotify = false, Sniper = false, SniperWait = 12,
+	EspPlayers = false, EspFruits = false, EspChests = false, EspBosses = false,
+	SpeedOn = false, Speed = 50, JumpOn = false, Jump = 80, Fly = false, FlySpeed = 60, Noclip = false, InfJump = false,
+	Water = false, Gravity = 196, FOV = 70, Fullbright = false, NoFog = false, AutoRejoin = false, FPSCap = 60,
+	WhOn = false, WhFruit = true, WhBoss = true, WhLevel = true, WhEvery = 0,
+	Pos = {},
+}
+pcall(function()
+	if isfile and isfile(FILE) then
+		local d = HS:JSONDecode(readfile(FILE))
+		for k, v in pairs(S) do if d[k] ~= nil and type(d[k]) == type(v) then S[k] = d[k] end end
+	end
+end)
+do
+	local vp = cam.ViewportSize
+	if S.ScalePct == 0 then S.ScalePct = math.clamp(math.floor(math.min(vp.X / 620, vp.Y / 380) * 100), 60, 110) end
+end
+local lang = S.Lang
+if lang == "" then
+	local id = ""
+	pcall(function() id = game:GetService("LocalizationService").RobloxLocaleId end)
+	lang = tostring(id):lower():sub(1, 2) == "pt" and "pt" or "en"
+end
+local function L(pt, en) return lang == "pt" and pt or en end
+local sep = (lang == "pt") and "." or ","
+
+------------------------------------------------------------------
+-- TEMA E HELPERS
+------------------------------------------------------------------
+local ACCENTS = {
+	Copper = Color3.fromRGB(196, 149, 108), Ocean = Color3.fromRGB(90, 169, 230), Violet = Color3.fromRGB(167, 139, 250),
+	Mint = Color3.fromRGB(95, 208, 165), Rose = Color3.fromRGB(239, 122, 168), Gold = Color3.fromRGB(227, 179, 65), Scarlet = Color3.fromRGB(226, 86, 78),
+}
+local ACC_ORDER = {"Copper", "Ocean", "Violet", "Mint", "Rose", "Gold", "Scarlet"}
+local T = {bg = Color3.fromRGB(24, 20, 18), side = Color3.fromRGB(29, 25, 22), card = Color3.fromRGB(34, 29, 26), line = Color3.fromRGB(50, 43, 38),
+	text = Color3.fromRGB(236, 228, 220), sub = Color3.fromRGB(140, 130, 121), off = Color3.fromRGB(62, 55, 50), dark = Color3.fromRGB(28, 21, 16),
+	acc = ACCENTS[S.Accent] or ACCENTS.Copper}
+
+local function new(c, p, k)
+	local o = Instance.new(c)
+	for a, b in pairs(p or {}) do if a ~= "Parent" then o[a] = b end end
+	for _, x in ipairs(k or {}) do x.Parent = o end
+	if p and p.Parent then o.Parent = p.Parent end
+	return o
+end
+local function corner(r) return new("UICorner", {CornerRadius = UDim.new(0, r)}) end
+local function tw(o, t, p, st)
+	if S.ReducedMotion then
+		for k, v in pairs(p) do pcall(function() o[k] = v end) end
+		return
+	end
+	pcall(function() TS:Create(o, TweenInfo.new(t, st or Enum.EasingStyle.Quint, Enum.EasingDirection.Out), p):Play() end)
+end
+local FONTS = {Pixel = {Enum.Font.Arcade, Enum.Font.Arcade}, Clean = {Enum.Font.GothamMedium, Enum.Font.GothamBold}, Mono = {Enum.Font.Code, Enum.Font.Code}}
+local fontObjs = setmetatable({}, {__mode = "k"})
+local function fnt(bold) return (FONTS[S.Font] or FONTS.Pixel)[bold and 2 or 1] end
+local function applyFont() for o, b in pairs(fontObjs) do pcall(function() o.Font = fnt(b) end) end end
+local binds, syncs, repaints = {}, {}, {}
+local function bind(o, prop, key) binds[#binds + 1] = {o, prop, key}; o[prop] = T[key] end
+local function rebind() for _, b in ipairs(binds) do pcall(function() b[1][b[2]] = T[b[3]] end) end end
+local function syncAll() for _, f in ipairs(syncs) do pcall(f) end end
+local function txt(p, bold, ck, class)
+	p.BackgroundTransparency = 1
+	local o = new(class or "TextLabel", p)
+	o.Font = fnt(bold)
+	fontObjs[o] = bold
+	if ck ~= false then bind(o, "TextColor3", ck or "text") end
+	return o
+end
+local function stroke(parent, key, th)
+	local s = new("UIStroke", {Thickness = th or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = parent})
+	bind(s, "Color", key or "line")
+	return s
+end
+local function ord(f) local n = (f:GetAttribute("n") or 0) + 1 f:SetAttribute("n", n) return n end
+local function click()
+	if not S.Sounds then return end
+	pcall(function()
+		local s = Instance.new("Sound")
+		s.SoundId = "rbxasset://sounds/button.wav"
+		s.Volume = S.Volume / 100 * 0.6
+		s.Parent = SoundService
+		s:Play()
+		game:GetService("Debris"):AddItem(s, 1.5)
+	end)
+end
+local function setAccent(n)
+	if not ACCENTS[n] then n = "Copper" end
+	S.Accent = n
+	T.acc = ACCENTS[n]
+	rebind()
+	syncAll()
+	for _, f in ipairs(repaints) do pcall(f) end
+end
+
+------------------------------------------------------------------
+-- LÓGICA DO JOGO (GM)
+------------------------------------------------------------------
+local GM = {safeUp = false, manual = false, loud = 0}
+local UI = {}
+function GM.root() local c = lp.Character return c and c:FindFirstChild("HumanoidRootPart") end
+function GM.hum() local c = lp.Character return c and c:FindFirstChildOfClass("Humanoid") end
+function GM.invoke(...)
+	local a = table.pack(...)
+	local rem = RepS:FindFirstChild("Remotes")
+	local cf = rem and rem:FindFirstChild("CommF_")
+	if not cf then return nil end
+	local ok, r = pcall(function() return cf:InvokeServer(table.unpack(a, 1, a.n)) end)
+	return ok and r or nil
+end
+function GM.loop(iv, fn) task.spawn(function() while alive do task.wait(iv) pcall(fn) end end) end
+function GM.val(n) local ok, v = pcall(function() return lp.Data[n].Value end) return ok and v or nil end
+function GM.fmt(n)
+	n = math.floor(tonumber(n) or 0)
+	local neg = n < 0
+	local s = tostring(math.abs(n)):reverse():gsub("(%d%d%d)", "%1" .. sep):reverse()
+	if s:sub(1, 1) == sep then s = s:sub(2) end
+	return (neg and "-" or "") .. s
+end
+function GM.anyAuto() return S.AutoLevel or S.Farm or S.AutoBoss or S.AutoElite or S.Chest or S.FruitGrab end
+function GM.goTo(cf)
+	local r = GM.root()
+	if not r then return end
+	local d = (cf.Position - r.Position).Magnitude
+	if d < 80 then r.CFrame = cf return end
+	local t = d / math.max(S.TravelSpeed, 50)
+	local tween = TS:Create(r, TweenInfo.new(t, Enum.EasingStyle.Linear), {CFrame = cf})
+	local done = false
+	local c = tween.Completed:Connect(function() done = true end)
+	tween:Play()
+	local t1 = tick()
+	while not done and alive and tick() - t1 < t + 1 do
+		if not GM.anyAuto() and not GM.manual then tween:Cancel() break end
+		task.wait(0.05)
+	end
+	c:Disconnect()
+end
+function GM.hoverTo(pos)
+	local r = GM.root()
+	if not r then return end
+	local tp = pos + Vector3.new(0, GM.safeUp and 230 or S.Height, 0)
+	if (tp - r.Position).Magnitude > 120 then GM.goTo(CFrame.new(tp)) else r.CFrame = CFrame.new(tp, pos) end
+	r.AssemblyLinearVelocity = Vector3.zero
+end
+function GM.equip()
+	local c = lp.Character
+	if not c then return end
+	local cur = c:FindFirstChildOfClass("Tool")
+	if cur and cur.ToolTip == S.Weapon then return end
+	local bp = lp:FindFirstChild("Backpack")
+	if not bp then return end
+	for _, t in ipairs(bp:GetChildren()) do
+		if t:IsA("Tool") and t.ToolTip == S.Weapon then
+			local h = GM.hum()
+			if h then h:EquipTool(t) end
+			return
+		end
+	end
+end
+function GM.nearest(name)
+	local r, folder = GM.root(), workspace:FindFirstChild("Enemies")
+	if not r or not folder then return end
+	local best, bd
+	for _, m in ipairs(folder:GetChildren()) do
+		if not name or m.Name == name then
+			local h, mr = m:FindFirstChildOfClass("Humanoid"), m:FindFirstChild("HumanoidRootPart")
+			if h and mr and h.Health > 0 then
+				local d = (mr.Position - r.Position).Magnitude
+				if not bd or d < bd then best, bd = mr, d end
+			end
+		end
+	end
+	return best
+end
+function GM.bring(target)
+	if not S.Bring or not target then return end
+	local folder = workspace:FindFirstChild("Enemies")
+	if not folder then return end
+	pcall(function() sethiddenproperty(lp, "SimulationRadius", math.huge) end)
+	for _, m in ipairs(folder:GetChildren()) do
+		local h, mr = m:FindFirstChildOfClass("Humanoid"), m:FindFirstChild("HumanoidRootPart")
+		if h and mr and h.Health > 0 and m.Name == target.Parent.Name and (mr.Position - target.Position).Magnitude < S.BringR then
+			mr.CFrame = target.CFrame
+			mr.CanCollide = false
+			mr.AssemblyLinearVelocity = Vector3.zero
+			h.WalkSpeed = 0
+		end
+	end
+end
+function GM.fruit()
+	for _, v in ipairs(workspace:GetChildren()) do
+		if (v:IsA("Tool") or v:IsA("Model")) and v.Name:lower():find("fruit") and v:FindFirstChild("Handle") then return v end
+	end
+end
+do
+	local function Q(a, b, mob, qn, ql, qx, qy, qz, mx, my, mz)
+		return {min = a, max = b, mob = mob, qn = qn, ql = ql, q = Vector3.new(qx, qy, qz), m = Vector3.new(mx, my, mz)}
+	end
+	GM.seas = {
+		{
+			Q(1, 9, "Bandit", "BanditQuest1", 1, 1059.37, 15.45, 1550.42, 1045.96, 27.00, 1560.00),
+			Q(10, 14, "Monkey", "JungleQuest", 1, -1598.09, 35.55, 153.38, -1448.52, 67.85, 11.47),
+			Q(15, 29, "Gorilla", "JungleQuest", 2, -1598.09, 35.55, 153.38, -1129.88, 40.46, -525.42),
+			Q(30, 39, "Pirate", "BuggyQuest1", 1, -1141.07, 4.10, 3831.55, -1103.51, 13.75, 3896.09),
+			Q(40, 59, "Brute", "BuggyQuest1", 2, -1141.07, 4.10, 3831.55, -1140.08, 14.81, 4322.92),
+			Q(60, 74, "Desert Bandit", "DesertQuest", 1, 896.51, 6.43, 4390.14, 984.99, 16.11, 4417.91),
+			Q(75, 89, "Desert Officer", "DesertQuest", 2, 896.51, 6.43, 4390.14, 1547.15, 14.45, 4381.00),
+			Q(90, 99, "Snow Bandit", "SnowQuest", 1, 1386.80, 87.27, -1298.35, 1356.30, 105.77, -1328.24),
+			Q(100, 119, "Snowman", "SnowQuest", 2, 1386.80, 87.27, -1298.35, 1218.80, 138.01, -1488.03),
+			Q(120, 149, "Chief Petty Officer", "MarineQuest2", 1, -5035.49, 28.67, 4324.18, -4931.15, 65.79, 4121.83),
+			Q(150, 174, "Sky Bandit", "SkyQuest", 1, -4842.13, 717.69, -2623.04, -4955.64, 365.46, -2908.18),
+			Q(175, 189, "Dark Master", "SkyQuest", 2, -4842.13, 717.69, -2623.04, -5148.16, 439.04, -2332.96),
+			Q(190, 209, "Prisoner", "PrisonerQuest", 1, 5310.60, 0.35, 474.94, 5098.97, -0.32, 474.23),
+			Q(210, 249, "Dangerous Prisoner", "PrisonerQuest", 2, 5310.60, 0.35, 474.94, 5654.56, 15.63, 866.30),
+			Q(250, 274, "Toga Warrior", "ColosseumQuest", 1, -1580.04, 6.35, -2986.47, -1820.21, 51.68, -2740.66),
+			Q(275, 299, "Gladiator", "ColosseumQuest", 2, -1580.04, 6.35, -2986.47, -1292.84, 56.38, -3339.03),
+			Q(300, 324, "Military Soldier", "MagmaQuest", 1, -5313.37, 10.95, 8515.29, -5411.16, 11.08, 8454.29),
+			Q(325, 374, "Military Spy", "MagmaQuest", 2, -5313.37, 10.95, 8515.29, -5802.87, 86.26, 8828.86),
+			Q(375, 399, "Fishman Warrior", "FishmanQuest", 1, 61122.65, 18.50, 1569.40, 60878.30, 18.48, 1543.76),
+			Q(400, 449, "Fishman Commando", "FishmanQuest", 2, 61122.65, 18.50, 1569.40, 61922.63, 18.48, 1493.93),
+			Q(450, 474, "God's Guard", "SkyExp1Quest", 1, -4721.89, 845.28, -1953.84, -4628.05, 866.93, -1931.24),
+			Q(475, 524, "Shanda", "SkyExp1Quest", 2, -7859.09, 5544.19, -381.48, -7685.12, 5601.08, -441.38),
+			Q(525, 549, "Royal Squad", "SkyExp2Quest", 1, -7906.82, 5634.66, -1411.99, -7654.25, 5637.10, -1407.75),
+			Q(550, 624, "Royal Soldier", "SkyExp2Quest", 2, -7906.82, 5634.66, -1411.99, -7760.41, 5679.90, -1884.81),
+			Q(625, 649, "Galley Pirate", "FountainQuest", 1, 5259.82, 37.35, 4050.03, 5551.02, 78.90, 3930.41),
+			Q(650, 699, "Galley Captain", "FountainQuest", 2, 5259.82, 37.35, 4050.03, 5441.95, 42.50, 4950.09),
+		},
+		{
+			Q(700, 724, "Raider", "Area1Quest", 1, -427.72, 72.99, 1835.94, 68.87, 93.63, 2429.67),
+			Q(725, 774, "Mercenary", "Area1Quest", 2, -427.72, 72.99, 1835.94, -864.85, 122.47, 1453.15),
+			Q(775, 799, "Swan Pirate", "Area2Quest", 1, 635.61, 73.10, 917.81, 1065.36, 137.64, 1324.37),
+			Q(800, 874, "Factory Staff", "Area2Quest", 2, 635.61, 73.10, 917.81, 533.22, 128.47, 355.62),
+			Q(875, 899, "Marine Lieutenant", "MarineQuest3", 1, -2440.79, 71.71, -3216.07, -2489.26, 84.61, -3151.88),
+			Q(900, 949, "Marine Captain", "MarineQuest3", 2, -2440.79, 71.71, -3216.07, -2335.20, 79.79, -3245.87),
+			Q(950, 974, "Zombie", "ZombieQuest", 1, -5494.34, 48.50, -794.59, -5536.50, 101.08, -836.83),
+			Q(975, 999, "Vampire", "ZombieQuest", 2, -5494.34, 48.50, -794.59, -5806.98, 16.72, -1164.43),
+			Q(1000, 1049, "Snow Trooper", "SnowMountainQuest", 1, 607.06, 401.44, -5370.55, 535.21, 432.74, -5484.92),
+			Q(1050, 1099, "Winter Warrior", "SnowMountainQuest", 2, 607.06, 401.44, -5370.55, 1234.44, 456.95, -5174.13),
+			Q(1100, 1124, "Lab Subordinate", "IceSideQuest", 1, -6061.84, 15.93, -4902.03, -5720.55, 63.31, -4784.61),
+			Q(1125, 1174, "Horned Warrior", "IceSideQuest", 2, -6061.84, 15.93, -4902.03, -6292.75, 91.18, -5502.65),
+			Q(1175, 1199, "Magma Ninja", "FireSideQuest", 1, -5429.04, 15.97, -5297.96, -5461.84, 130.36, -5836.47),
+			Q(1200, 1249, "Lava Pirate", "FireSideQuest", 2, -5429.04, 15.97, -5297.96, -5251.18, 55.16, -4774.40),
+			Q(1250, 1274, "Ship Deckhand", "ShipQuest1", 1, 1037.80, 125.09, 32911.60, 1212.01, 150.79, 33059.24),
+			Q(1275, 1299, "Ship Engineer", "ShipQuest1", 2, 1037.80, 125.09, 32911.60, 919.47, 43.54, 32779.96),
+			Q(1300, 1324, "Ship Steward", "ShipQuest2", 1, 968.80, 125.09, 33244.12, 919.43, 129.55, 33436.03),
+			Q(1325, 1349, "Ship Officer", "ShipQuest2", 2, 968.80, 125.09, 33244.12, 1036.01, 181.43, 33315.72),
+			Q(1350, 1374, "Arctic Warrior", "FrostQuest", 1, 5668.13, 28.52, -6483.33, 5935.45, 77.26, -6472.75),
+			Q(1375, 1424, "Snow Lurker", "FrostQuest", 2, 5668.13, 28.52, -6483.33, 5628.48, 57.57, -6618.34),
+			Q(1425, 1449, "Sea Soldier", "ForgottenQuest", 1, -3054.58, 236.87, -10147.78, -3185.01, 58.78, -9663.60),
+			Q(1450, 1499, "Water Fighter", "ForgottenQuest", 2, -3054.58, 236.87, -10147.78, -3262.93, 298.69, -10552.53),
+		},
+		{
+			Q(1500, 1524, "Pirate Millionaire", "PiratePortQuest", 1, -290.07, 42.90, 5581.59, -245.99, 47.31, 5584.10),
+			Q(1525, 1574, "Pistol Billionaire", "PiratePortQuest", 2, -290.07, 42.90, 5581.59, -187.33, 86.24, 6013.51),
+			Q(1575, 1599, "Dragon Crew Warrior", "AmazonQuest", 1, 5832.83, 51.69, -1101.51, 6141.14, 51.35, -1340.74),
+			Q(1600, 1624, "Dragon Crew Archer", "AmazonQuest", 2, 5832.83, 51.69, -1101.51, 6616.42, 441.77, 446.04),
+			Q(1625, 1649, "Female Islander", "AmazonQuest2", 1, 5448.86, 601.52, 751.13, 4685.26, 735.80, 815.34),
+			Q(1650, 1699, "Giant Islander", "AmazonQuest2", 2, 5448.86, 601.52, 751.13, 4729.09, 590.44, -36.97),
+			Q(1700, 1724, "Marine Commodore", "MarineTreeIsland", 1, 2179.99, 28.73, -6740.06, 2286.00, 73.13, -7159.81),
+			Q(1725, 1774, "Marine Rear Admiral", "MarineTreeIsland", 2, 2179.99, 28.73, -6740.06, 3656.77, 160.52, -7001.60),
+			Q(1775, 1799, "Fishman Raider", "DeepForestIsland3", 1, -10581.66, 330.87, -8761.19, -10407.53, 331.76, -8368.52),
+			Q(1800, 1824, "Fishman Captain", "DeepForestIsland3", 2, -10581.66, 330.87, -8761.19, -10994.70, 352.38, -9002.11),
+			Q(1825, 1849, "Forest Pirate", "DeepForestIsland", 1, -13234.04, 331.49, -7625.40, -13274.48, 332.38, -7769.58),
+			Q(1850, 1899, "Mythological Pirate", "DeepForestIsland", 2, -13234.04, 331.49, -7625.40, -13680.61, 501.08, -6991.19),
+			Q(1900, 1924, "Jungle Pirate", "DeepForestIsland2", 1, -12680.38, 389.97, -9902.02, -12256.16, 331.74, -10485.84),
+			Q(1925, 1974, "Musketeer Pirate", "DeepForestIsland2", 2, -12680.38, 389.97, -9902.02, -13457.90, 391.55, -9859.18),
+			Q(1975, 1999, "Reborn Skeleton", "HauntedQuest1", 1, -9479.22, 141.22, 5566.09, -8763.72, 165.72, 6159.86),
+			Q(2000, 2024, "Living Zombie", "HauntedQuest1", 2, -9479.22, 141.22, 5566.09, -10144.13, 138.63, 5838.09),
+			Q(2025, 2049, "Demonic Soul", "HauntedQuest2", 1, -9516.99, 178.01, 6078.99, -9505.87, 172.10, 6158.99),
+			Q(2050, 2074, "Posessed Mummy", "HauntedQuest2", 2, -9516.99, 178.01, 6078.99, -9582.02, 6.25, 6205.48),
+			Q(2075, 2099, "Peanut Scout", "NutsIslandQuest", 1, -2104.39, 38.13, -10194.22, -2143.24, 47.72, -10029.99),
+			Q(2100, 2124, "Peanut President", "NutsIslandQuest", 2, -2104.39, 38.13, -10194.22, -1859.35, 38.10, -10422.43),
+			Q(2125, 2149, "Ice Cream Chef", "IceCreamIslandQuest", 1, -820.65, 65.82, -10965.80, -872.24, 65.82, -10919.96),
+			Q(2150, 2199, "Ice Cream Commander", "IceCreamIslandQuest", 2, -820.65, 65.82, -10965.80, -558.06, 112.05, -11290.77),
+			Q(2200, 2224, "Cookie Crafter", "CakeQuest1", 1, -2021.32, 37.80, -12028.73, -2374.14, 37.80, -12125.30),
+			Q(2225, 2249, "Cake Guard", "CakeQuest1", 2, -2021.32, 37.80, -12028.73, -1598.31, 43.77, -12244.58),
+			Q(2250, 2274, "Baking Staff", "CakeQuest2", 1, -1927.92, 37.80, -12842.54, -1887.80, 77.62, -12998.35),
+			Q(2275, 2299, "Head Baker", "CakeQuest2", 2, -1927.92, 37.80, -12842.54, -2216.19, 82.88, -12869.29),
+			Q(2300, 2324, "Cocoa Warrior", "ChocQuest1", 1, 233.22, 29.88, -12201.23, -21.55, 80.57, -12352.38),
+			Q(2325, 2349, "Chocolate Bar Battler", "ChocQuest1", 2, 233.22, 29.88, -12201.23, 582.59, 77.19, -12463.16),
+			Q(2350, 2374, "Sweet Thief", "ChocQuest2", 1, 148.65, 29.88, -12204.59, 165.18, 76.06, -12600.83),
+			Q(2375, 2399, "Candy Rebel", "ChocQuest2", 2, 148.65, 29.88, -12204.59, 134.86, 77.25, -12876.54),
+		},
+	}
+end
+function GM.sea()
+	local id = game.PlaceId
+	if id == 2753915549 then return 1 elseif id == 4442272183 then return 2 elseif id == 7449423635 then return 3 end
+	local lvl = GM.val("Level") or 1
+	if lvl >= 1500 then return 3 elseif lvl >= 700 then return 2 end
+	return 1
+end
+function GM.questFor(lvl)
+	for _, e in ipairs(GM.seas[GM.sea()]) do if lvl >= e.min and lvl <= e.max then return e end end
+end
+GM.Bosses = {"Saber Expert", "The Gorilla King", "Bobby", "Yeti", "Vice Admiral", "Warden", "Chief Warden", "Swan", "Magma Admiral",
+	"Fishman Lord", "Wysper", "Thunder God", "Cyborg", "Diamond", "Jeremy", "Fajita", "Don Swan", "Smoke Admiral", "Awakened Ice Admiral",
+	"Tide Keeper", "Stone", "Island Empress", "Kilo Admiral", "Captain Elephant", "Beautiful Pirate", "Cake Queen", "Longma", "Soul Reaper"}
+GM.Elite = {"Deandre", "Diablo", "Urban"}
+GM.BossSet = {}
+for _, b in ipairs(GM.Bosses) do GM.BossSet[b] = true end
+for _, b in ipairs(GM.Elite) do GM.BossSet[b] = true end
+GM.zoneNames, GM.zoneMap = {}, {}
+for _, e in ipairs(GM.seas[GM.sea()]) do
+	if e.ql == 1 then
+		local label = e.mob .. " (Lv " .. e.min .. ")"
+		GM.zoneNames[#GM.zoneNames + 1] = label
+		GM.zoneMap[label] = e
+	end
+end
+if S.Zone == "" and GM.zoneNames[1] then S.Zone = GM.zoneNames[1] end
+
+-- webhook
+local req = (syn and syn.request) or http_request or request or (http and http.request)
+GM.whUrl = ""
+pcall(function() if isfile and isfile("AppleBlox_webhook.txt") then GM.whUrl = readfile("AppleBlox_webhook.txt") end end)
+function GM.webhook(title, desc, color, force)
+	if (not S.WhOn and not force) or GM.whUrl == "" or not req or not GM.whUrl:find("^https://") then return false end
+	pcall(function()
+		req({Url = GM.whUrl, Method = "POST", Headers = {["Content-Type"] = "application/json"},
+			Body = HS:JSONEncode({username = "Apple Hub", embeds = {{title = title, description = desc, color = color or 3447003,
+				footer = {text = lp.DisplayName .. " • " .. os.date("%H:%M")}}}})})
+	end)
+	return true
+end
+-- sessão
+GM.base = {}
+function GM.gain(n)
+	local cur = GM.val(n)
+	if cur and GM.base[n] == nil then GM.base[n] = cur end
+	return (cur and GM.base[n]) and (cur - GM.base[n]) or 0
+end
+function GM.rate(n)
+	local el = tick() - t0
+	return el < 30 and 0 or GM.gain(n) / (el / 3600)
+end
+function GM.clock(s)
+	s = math.floor(s)
+	if s >= 3600 then return string.format("%d:%02d:%02d", math.floor(s / 3600), math.floor(s % 3600 / 60), s % 60) end
+	return string.format("%02d:%02d", math.floor(s / 60), s % 60)
+end
+function GM.short(n) return (tostring(n):gsub("%-.*$", "")) end
+function GM.fetchStock()
+	local r = GM.invoke("GetFruits")
+	if type(r) ~= "table" then return nil end
+	local list = {}
+	for _, f in pairs(r) do
+		if type(f) == "table" and f.OnSale and f.Name then list[#list + 1] = {name = f.Name, price = tonumber(f.Price) or 0} end
+	end
+	table.sort(list, function(a, b) return a.price < b.price end)
+	return list
+end
+function GM.hop()
+	local ok, data = pcall(function()
+		return HS:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+	end)
+	if ok and data and data.data then
+		for _, s in ipairs(data.data) do
+			if s.id ~= game.JobId and s.playing < s.maxPlayers - 1 then TPS:TeleportToPlaceInstance(game.PlaceId, s.id, lp) return true end
+		end
+	end
+	return false
+end
+
+------------------------------------------------------------------
+-- INTERFACE: BASE
+------------------------------------------------------------------
+local gui = new("ScreenGui", {Name = "AppleBlox", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 50})
+gui.Parent = parentGui
+local W, H = 560, 322
+local main = new("CanvasGroup", {Size = UDim2.fromOffset(W, H), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+	BackgroundColor3 = T.bg, BorderSizePixel = 0, GroupTransparency = 1, Visible = false, Parent = gui}, {corner(8)})
+bind(main, "BackgroundColor3", "bg")
+local uis = new("UIScale", {Scale = S.ScalePct / 100 * 0.94, Parent = main})
+local mainStroke = stroke(main, "line", 1)
+
+-- toast
+local toastBox = new("Frame", {Size = UDim2.fromOffset(250, 300), Position = UDim2.new(1, -262, 0, 56), BackgroundTransparency = 1, ZIndex = 60, Parent = gui},
+	{new("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Right})})
+local function toast(title, msg, dur)
+	local f = new("CanvasGroup", {Size = UDim2.new(1, 0, 0, 46), BackgroundColor3 = T.card, GroupTransparency = 1, ZIndex = 61, Parent = toastBox}, {corner(6)})
+	bind(f, "BackgroundColor3", "card")
+	stroke(f, "line", 1)
+	local bar = new("Frame", {Size = UDim2.new(0, 2, 1, -14), Position = UDim2.fromOffset(8, 7), BorderSizePixel = 0, ZIndex = 62, Parent = f}, {corner(1)})
+	bind(bar, "BackgroundColor3", "acc")
+	txt({Size = UDim2.new(1, -28, 0, 18), Position = UDim2.fromOffset(18, 6), Text = tostring(title), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 62, Parent = f}, true)
+	txt({Size = UDim2.new(1, -28, 0, 16), Position = UDim2.fromOffset(18, 25), Text = tostring(msg), TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 62, Parent = f}, false, "sub")
+	tw(f, 0.25, {GroupTransparency = 0})
+	task.delay(dur or 3, function()
+		tw(f, 0.25, {GroupTransparency = 1})
+		task.wait(0.3)
+		pcall(function() f:Destroy() end)
+	end)
+end
+
+-- arrastar (suave ou instantâneo)
+local drags = {}
+local function makeDrag(handle, target)
+	local d = {t = target, goal = target.Position, home = target.Position, moved = false}
+	local active, start, origin
+	handle.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			active, start, origin, d.moved = true, i.Position, d.goal, false
+			i.Changed:Connect(function() if i.UserInputState == Enum.UserInputState.End then active = false end end)
+		end
+	end)
+	track(UIS.InputChanged:Connect(function(i)
+		if active and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			local dl = i.Position - start
+			if dl.Magnitude > 6 then d.moved = true end
+			d.goal = UDim2.new(origin.X.Scale, origin.X.Offset + dl.X, origin.Y.Scale, origin.Y.Offset + dl.Y)
+			if S.DragStyle ~= "Smooth" or S.ReducedMotion then target.Position = d.goal end
+		end
+	end))
+	drags[#drags + 1] = d
+	return d
+end
+track(RS.RenderStepped:Connect(function(dt)
+	if S.DragStyle ~= "Smooth" or S.ReducedMotion then return end
+	local k = math.min(1, dt * 14)
+	for _, d in ipairs(drags) do
+		local a, g = d.t.Position, d.goal
+		if a ~= g then
+			d.t.Position = UDim2.new(g.X.Scale, a.X.Offset + (g.X.Offset - a.X.Offset) * k, g.Y.Scale, a.Y.Offset + (g.Y.Offset - a.Y.Offset) * k)
+		end
+	end
+end))
+
+-- runas flutuantes (reagem à música do jogo)
+local runeLayer = new("Frame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 0, Parent = main})
+local runes, glyphs = {}, {"✦", "✧", "◇", "✶", "·"}
+for i = 1, 16 do
+	runes[i] = {l = txt({Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(0.5, 0.5), Text = glyphs[i % 5 + 1], TextSize = 9 + (i * 7) % 11, ZIndex = 0, Parent = runeLayer}, false, "acc"),
+		x = (i * 0.137) % 1, y = (i * 0.291) % 1, v = 0.02 + (i % 5) * 0.012, ph = i * 1.7}
+end
+GM.loop(0.4, function()
+	local m = 0
+	for _, p in ipairs({SoundService, workspace}) do
+		for _, s in ipairs(p:GetChildren()) do
+			if s:IsA("Sound") and s.IsPlaying then m = math.max(m, s.PlaybackLoudness) end
+		end
+	end
+	GM.loud = math.clamp(m / 500, 0, 1)
+end)
+local shown = false
+track(RS.RenderStepped:Connect(function(dt)
+	if not (S.Runes and shown) then runeLayer.Visible = false return end
+	runeLayer.Visible = true
+	dt = math.min(dt, 0.05)
+	local react = S.RuneReact and GM.loud or 0
+	local t = tick()
+	for _, r in ipairs(runes) do
+		if not S.ReducedMotion then r.y = r.y - r.v * dt * (1 + react * 4) end
+		if r.y < -0.05 then r.y = 1.05 end
+		r.l.Position = UDim2.fromScale(r.x + math.sin(t * 0.7 + r.ph) * 0.012, r.y)
+		r.l.TextTransparency = math.clamp(0.78 - react * 0.45 + 0.12 * math.sin(t * 1.6 + r.ph), 0.05, 0.95)
+	end
+end))
+
+-- barra lateral
+local side = new("Frame", {Size = UDim2.new(0, 132, 1, 0), BackgroundColor3 = T.side, BorderSizePixel = 0, ZIndex = 2, Parent = main},
+	{new("UIGradient", {Rotation = 90, Transparency = NumberSequence.new(0, 0.35)})})
+bind(side, "BackgroundColor3", "side")
+new("Frame", {Size = UDim2.new(0, 1, 1, 0), Position = UDim2.new(1, -1, 0, 0), BackgroundColor3 = T.line, BorderSizePixel = 0, ZIndex = 3, Parent = side})
+bind(side:FindFirstChildOfClass("Frame"), "BackgroundColor3", "line")
+txt({Size = UDim2.fromOffset(22, 22), Position = UDim2.fromOffset(10, 10), Text = "✦", TextSize = 20, ZIndex = 3, Parent = side}, true, "acc")
+txt({Size = UDim2.new(1, -40, 0, 22), Position = UDim2.fromOffset(34, 10), Text = "APPLE HUB", TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 3, Parent = side}, true)
+txt({Size = UDim2.new(1, -20, 0, 26), Position = UDim2.fromOffset(10, 34), Text = "Blox Fruits Edition", TextSize = 10, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 3, Parent = side}, false, "sub")
+local tabScroll = new("ScrollingFrame", {Size = UDim2.new(1, -12, 1, -124), Position = UDim2.fromOffset(6, 68), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0,
+	AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 3, Parent = side}, {new("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder})})
+
+-- cartão do usuário
+local ucard = new("TextButton", {Size = UDim2.new(1, -12, 0, 44), Position = UDim2.new(0, 6, 1, -50), BackgroundColor3 = T.card, BackgroundTransparency = 0.3, Text = "", AutoButtonColor = false, ZIndex = 3, Parent = side}, {corner(6)})
+local uav = new("ImageLabel", {Size = UDim2.fromOffset(26, 26), Position = UDim2.fromOffset(8, 9), BackgroundColor3 = T.bg, ZIndex = 4, Parent = ucard}, {corner(13)})
+local uname = txt({Size = UDim2.new(1, -62, 0, 16), Position = UDim2.fromOffset(40, 7), Text = "", TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4, Parent = ucard}, true)
+txt({Size = UDim2.new(1, -62, 0, 14), Position = UDim2.fromOffset(40, 23), Text = "BLOX EDITION", TextSize = 8, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4, Parent = ucard}, false, "sub")
+txt({Size = UDim2.fromOffset(14, 44), Position = UDim2.new(1, -18, 0, 0), Text = "›", TextSize = 16, ZIndex = 4, Parent = ucard}, false, "sub")
+task.spawn(function()
+	local ok, img = pcall(function() return Players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100) end)
+	if ok then uav.Image = img end
+end)
+
+-- barra do topo
+local top = new("Frame", {Size = UDim2.new(1, -132, 0, 38), Position = UDim2.fromOffset(132, 0), BackgroundTransparency = 1, ZIndex = 4, Parent = main})
+local topLine = new("Frame", {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1), BorderSizePixel = 0, ZIndex = 4, Parent = top})
+bind(topLine, "BackgroundColor3", "line")
+local titleBtn = txt({Size = UDim2.fromOffset(190, 38), Position = UDim2.fromOffset(14, 0), Text = "", TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, ZIndex = 5, Parent = top}, false, "text", "TextButton")
+txt({Size = UDim2.fromOffset(16, 38), Position = UDim2.fromOffset(176, 0), Text = "▾", TextSize = 12, ZIndex = 5, Parent = top}, false, "sub")
+local searchBtn = txt({Size = UDim2.fromOffset(28, 38), Position = UDim2.new(1, -66, 0, 0), Text = "⌕", TextSize = 20, ZIndex = 5, Parent = top}, false, "text", "TextButton")
+local minBtn = txt({Size = UDim2.fromOffset(28, 38), Position = UDim2.new(1, -34, 0, 0), Text = "–", TextSize = 18, ZIndex = 5, Parent = top}, false, "text", "TextButton")
+local searchBox = new("TextBox", {Size = UDim2.new(1, -90, 0, 24), Position = UDim2.fromOffset(12, 7), BackgroundColor3 = T.card, Text = "", PlaceholderText = L("Buscar nesta aba...", "Search this tab..."),
+	ClearTextOnFocus = false, TextSize = 11, TextColor3 = T.text, PlaceholderColor3 = T.sub, TextXAlignment = Enum.TextXAlignment.Left, Visible = false, ZIndex = 6, Parent = top},
+	{corner(4), new("UIPadding", {PaddingLeft = UDim.new(0, 8)})})
+searchBox.Font = fnt(false); fontObjs[searchBox] = false
+bind(searchBox, "BackgroundColor3", "card"); bind(searchBox, "TextColor3", "text"); bind(searchBox, "PlaceholderColor3", "sub")
+local content = new("Frame", {Size = UDim2.new(1, -132, 1, -38), Position = UDim2.fromOffset(132, 38), BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 1, Parent = main})
+
+------------------------------------------------------------------
+-- PÁGINAS, GRUPOS E COMPONENTES
+------------------------------------------------------------------
+local pages, order, cur, groups = {}, {}, nil, {}
+local function styleTabs()
+	for id, p in pairs(pages) do
+		local on = (id == cur)
+		p.tb.BackgroundTransparency = on and 0 or 1
+		p.mark.Visible = on
+		p.ic.TextColor3 = on and T.acc or T.sub
+		p.lb.TextColor3 = on and T.text or T.sub
+	end
+end
+repaints[#repaints + 1] = styleTabs
+local function applySearch(q)
+	q = (q or ""):lower()
+	for _, g in ipairs(groups) do
+		if g.page == cur then
+			local any = false
+			for _, r in ipairs(g.rows) do
+				local ok = (q == "") or (r.t:find(q, 1, true) ~= nil)
+				r.f.Visible = ok
+				if ok then any = true end
+			end
+			g.f.Visible = any or #g.rows == 0
+		end
+	end
+end
+local function showPage(id)
+	if cur == id or not pages[id] then return end
+	local old = cur and pages[cur]
+	cur = id
+	local p = pages[id]
+	p.wrap.Visible = true
+	if not S.ReducedMotion then p.wrap.GroupTransparency = 1; p.wrap.Position = UDim2.fromOffset(14, 0) end
+	tw(p.wrap, 0.3, {GroupTransparency = 0, Position = UDim2.fromOffset(0, 0)})
+	if old then old.wrap.Visible = false end
+	styleTabs()
+	titleBtn.Text = p.label
+	searchBox.Text = ""
+	applySearch("")
+	p.sc.CanvasPosition = Vector2.zero
+end
+local function addPage(id, label, icon)
+	local wrap = new("CanvasGroup", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = content})
+	local sc = new("ScrollingFrame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), Parent = wrap},
+		{new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}),
+			new("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 12), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 14)})})
+	bind(sc, "ScrollBarImageColor3", "acc")
+	local idx = #order + 1
+	order[idx] = id
+	local tb = new("TextButton", {Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = T.card, BackgroundTransparency = 1, Text = "", AutoButtonColor = false, LayoutOrder = idx, ZIndex = 3, Parent = tabScroll}, {corner(6)})
+	bind(tb, "BackgroundColor3", "card")
+	local mark = new("Frame", {Size = UDim2.fromOffset(2, 14), Position = UDim2.new(0, 0, 0.5, -7), BorderSizePixel = 0, Visible = false, ZIndex = 4, Parent = tb}, {corner(1)})
+	bind(mark, "BackgroundColor3", "acc")
+	local ic = txt({Size = UDim2.fromOffset(20, 30), Position = UDim2.fromOffset(10, 0), Text = icon, TextSize = 14, ZIndex = 4, Parent = tb}, true, false)
+	local lb = txt({Size = UDim2.new(1, -38, 1, 0), Position = UDim2.fromOffset(34, 0), Text = label, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4, Parent = tb}, false, false)
+	pages[id] = {wrap = wrap, sc = sc, tb = tb, mark = mark, ic = ic, lb = lb, label = label}
+	tb.MouseButton1Click:Connect(function() click(); showPage(id) end)
+	return sc
+end
+
+local function group(parentF, id)
+	local f = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = T.card, BorderSizePixel = 0, LayoutOrder = ord(parentF), Parent = parentF},
+		{corner(6), new("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder})})
+	bind(f, "BackgroundColor3", "card")
+	stroke(f, "line", 1)
+	local g = {f = f, rows = {}, page = id, sc = pages[id].sc, n = 0}
+	groups[#groups + 1] = g
+	return g
+end
+local function section(parentF, text, help)
+	local f = new("Frame", {Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, LayoutOrder = ord(parentF), Parent = parentF})
+	txt({Size = UDim2.fromOffset(12, 20), Text = "✦", TextSize = 10, Parent = f}, true, "acc")
+	txt({Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(16, 0), Text = text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = f}, true)
+	if help then
+		local q = txt({Size = UDim2.fromOffset(20, 20), Position = UDim2.new(1, -20, 0, 0), Text = "?", TextSize = 11, Parent = f}, false, "sub", "TextButton")
+		q.MouseButton1Click:Connect(function() toast(text, help, 4.5) end)
+	end
+end
+local function mkRow(g, h, label, noreg)
+	g.n = g.n + 1
+	local r = new("Frame", {Size = UDim2.new(1, 0, 0, h), BackgroundTransparency = 1, LayoutOrder = g.n, Parent = g.f})
+	local ln = new("Frame", {Size = UDim2.new(1, -16, 0, 1), Position = UDim2.new(0, 8, 1, -1), BorderSizePixel = 0, Parent = r})
+	bind(ln, "BackgroundColor3", "line")
+	if not noreg then g.rows[#g.rows + 1] = {f = r, t = (label or ""):lower()} end
+	return r
+end
+local function clearGroup(g)
+	for _, c in ipairs(g.f:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+	g.n = 0
+	g.rows = {}
+end
+local function toggle(g, text, key, cb, sub)
+	local r = mkRow(g, sub and 48 or 38, text .. " " .. (sub or ""))
+	txt({Size = UDim2.new(1, -70, 0, sub and 22 or 38), Position = UDim2.fromOffset(12, sub and 6 or 0), Text = text, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r})
+	if sub then txt({Size = UDim2.new(1, -70, 0, 16), Position = UDim2.fromOffset(12, 27), Text = sub, TextSize = 9, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r}, false, "sub") end
+	local pill = new("TextButton", {Size = UDim2.fromOffset(38, 20), Position = UDim2.new(1, -50, 0.5, -10), Text = "", AutoButtonColor = false, Parent = r}, {corner(10)})
+	local knob = new("Frame", {Size = UDim2.fromOffset(16, 16), BackgroundColor3 = white, BorderSizePixel = 0, Parent = pill}, {corner(8)})
+	local function paint(anim)
+		local on = S[key]
+		local pos, col = on and UDim2.fromOffset(20, 2) or UDim2.fromOffset(2, 2), on and T.acc or T.off
+		if anim then tw(knob, 0.2, {Position = pos}, Enum.EasingStyle.Back); tw(pill, 0.2, {BackgroundColor3 = col})
+		else knob.Position = pos; pill.BackgroundColor3 = col end
+	end
+	paint(false)
+	syncs[#syncs + 1] = function() paint(false) end
+	pill.MouseButton1Click:Connect(function()
+		click()
+		S[key] = not S[key]
+		paint(true)
+		if cb then task.spawn(function() local ok, e = pcall(cb, S[key]); if not ok then toast("Erro", tostring(e), 4) end end) end
+	end)
+end
+local function slider(g, text, min, max, key, cb, suffix)
+	suffix = suffix or ""
+	local r = mkRow(g, 54, text)
+	txt({Size = UDim2.new(0.62, 0, 0, 24), Position = UDim2.fromOffset(12, 3), Text = text, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r})
+	local box = new("Frame", {Size = UDim2.fromOffset(58, 20), Position = UDim2.new(1, -70, 0, 5), BorderSizePixel = 0, Parent = r}, {corner(4)})
+	bind(box, "BackgroundColor3", "bg"); stroke(box, "line", 1)
+	local vl = txt({Size = UDim2.fromScale(1, 1), Text = S[key] .. suffix, TextSize = 10, Parent = box})
+	local bar = new("Frame", {Size = UDim2.new(1, -24, 0, 6), Position = UDim2.fromOffset(12, 37), BorderSizePixel = 0, Parent = r}, {corner(3)})
+	bind(bar, "BackgroundColor3", "off")
+	local fill = new("Frame", {Size = UDim2.new(0, 0, 1, 0), BorderSizePixel = 0, Parent = bar}, {corner(3)})
+	bind(fill, "BackgroundColor3", "acc")
+	new("Frame", {Size = UDim2.fromOffset(12, 12), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = white, BorderSizePixel = 0, Parent = fill}, {corner(6)})
+	local function paint()
+		fill.Size = UDim2.new(math.clamp((S[key] - min) / (max - min), 0, 1), 0, 1, 0)
+		vl.Text = S[key] .. suffix
+	end
+	paint()
+	syncs[#syncs + 1] = paint
+	local sliding = false
+	local function set(x)
+		local a = math.clamp((x - bar.AbsolutePosition.X) / math.max(bar.AbsoluteSize.X, 1), 0, 1)
+		S[key] = math.floor(min + (max - min) * a + 0.5)
+		paint()
+		if cb then pcall(cb, S[key]) end
+	end
+	local hit = new("TextButton", {Size = UDim2.new(1, 0, 0, 26), Position = UDim2.fromOffset(0, 27), BackgroundTransparency = 1, Text = "", Parent = r})
+	hit.InputBegan:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			sliding = true
+			g.sc.ScrollingEnabled = false
+			set(i.Position.X)
+		end
+	end)
+	track(UIS.InputChanged:Connect(function(i)
+		if sliding and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then set(i.Position.X) end
+	end))
+	track(UIS.InputEnded:Connect(function(i)
+		if sliding and (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then
+			sliding = false
+			g.sc.ScrollingEnabled = true
+		end
+	end))
+end
+local function dropdown(g, text, opts, key, cb)
+	local r = mkRow(g, 62, text)
+	r.ClipsDescendants = true
+	txt({Size = UDim2.new(1, -24, 0, 22), Position = UDim2.fromOffset(12, 3), Text = text, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r})
+	local head = new("TextButton", {Size = UDim2.new(1, -24, 0, 28), Position = UDim2.fromOffset(12, 26), Text = "", AutoButtonColor = false, Parent = r}, {corner(4)})
+	bind(head, "BackgroundColor3", "bg"); stroke(head, "line", 1)
+	local val = txt({Size = UDim2.new(1, -30, 1, 0), Position = UDim2.fromOffset(10, 0), Text = tostring(S[key]), TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head})
+	local arrow = txt({Size = UDim2.fromOffset(20, 28), Position = UDim2.new(1, -22, 0, 0), Text = "▾", TextSize = 12, Parent = head}, false, "sub")
+	local listH = math.min(#opts * 28, 140)
+	local list = new("ScrollingFrame", {Size = UDim2.new(1, -24, 0, listH), Position = UDim2.fromOffset(12, 60), BackgroundTransparency = 1, BorderSizePixel = 0,
+		ScrollBarThickness = 2, CanvasSize = UDim2.fromOffset(0, #opts * 28), Parent = r}, {new("UIListLayout", {Padding = UDim.new(0, 2)})})
+	local open = false
+	syncs[#syncs + 1] = function() val.Text = tostring(S[key]) end
+	for _, o in ipairs(opts) do
+		local b = new("TextButton", {Size = UDim2.new(1, -4, 0, 26), Text = "", AutoButtonColor = false, Parent = list}, {corner(4)})
+		bind(b, "BackgroundColor3", "bg")
+		txt({Size = UDim2.new(1, -16, 1, 0), Position = UDim2.fromOffset(8, 0), Text = o, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = b})
+		b.MouseButton1Click:Connect(function()
+			click()
+			S[key] = o
+			val.Text = o
+			open = false
+			tw(r, 0.25, {Size = UDim2.new(1, 0, 0, 62)})
+			arrow.Rotation = 0
+			if cb then task.spawn(function() local ok, e = pcall(cb, o); if not ok then toast("Erro", tostring(e), 4) end end) end
+		end)
+	end
+	head.MouseButton1Click:Connect(function()
+		click()
+		open = not open
+		tw(r, 0.25, {Size = UDim2.new(1, 0, 0, open and (66 + listH) or 62)})
+		arrow.Rotation = open and 180 or 0
+	end)
+end
+local function button(g, text, cb, primary)
+	local r = mkRow(g, 38, text)
+	local b = new("TextButton", {Size = UDim2.new(1, -16, 0, 28), Position = UDim2.fromOffset(8, 5), Text = "", AutoButtonColor = false, Parent = r}, {corner(4)})
+	if primary then bind(b, "BackgroundColor3", "acc") else bind(b, "BackgroundColor3", "bg"); stroke(b, "line", 1) end
+	txt({Size = UDim2.fromScale(1, 1), Text = text, TextSize = 11, Parent = b}, false, primary and "dark" or "text")
+	b.MouseButton1Click:Connect(function()
+		click()
+		b.BackgroundTransparency = 0.45
+		tw(b, 0.3, {BackgroundTransparency = 0})
+		task.spawn(function() local ok, e = pcall(cb); if not ok then toast("Erro", tostring(e), 4) end end)
+	end)
+end
+local function input(g, text, placeholder, cb)
+	local r = mkRow(g, 62, text)
+	txt({Size = UDim2.new(1, -24, 0, 22), Position = UDim2.fromOffset(12, 3), Text = text, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r})
+	local box = new("TextBox", {Size = UDim2.new(1, -24, 0, 28), Position = UDim2.fromOffset(12, 26), Text = "", PlaceholderText = placeholder, ClearTextOnFocus = false, TextSize = 10,
+		TextXAlignment = Enum.TextXAlignment.Left, Parent = r}, {corner(4), new("UIPadding", {PaddingLeft = UDim.new(0, 8)})})
+	box.Font = fnt(false); fontObjs[box] = false
+	bind(box, "BackgroundColor3", "bg"); bind(box, "TextColor3", "text"); bind(box, "PlaceholderColor3", "sub")
+	stroke(box, "line", 1)
+	box.FocusLost:Connect(function(enter)
+		if enter and box.Text ~= "" then
+			local t = box.Text
+			box.Text = ""
+			local ok, e = pcall(cb, t)
+			if not ok then toast("Erro", tostring(e), 4) end
+		end
+	end)
+end
+local infos = {}
+local function info(g, text, fn)
+	local r = mkRow(g, 32, text)
+	txt({Size = UDim2.new(0.45, 0, 1, 0), Position = UDim2.fromOffset(12, 0), Text = text, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r}, false, "sub")
+	local v = txt({Size = UDim2.new(0.55, -24, 1, 0), Position = UDim2.new(0.45, 12, 0, 0), Text = "—", TextSize = 10, TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r})
+	infos[#infos + 1] = {v, fn}
+end
+local function para(g, text)
+	local r = mkRow(g, 0, "")
+	r.AutomaticSize = Enum.AutomaticSize.Y
+	r.Size = UDim2.new(1, 0, 0, 0)
+	new("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10), Parent = r})
+	return txt({Size = UDim2.new(1, -24, 0, 0), Position = UDim2.fromOffset(12, 0), AutomaticSize = Enum.AutomaticSize.Y, Text = text, TextSize = 10, TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Parent = r}, false, "sub")
+end
+local function rowItem(g, text, actions)
+	local r = mkRow(g, 36, "", true)
+	local x = 8
+	for i = #actions, 1, -1 do
+		local a = actions[i]
+		local w = a.w or 60
+		local b = new("TextButton", {Size = UDim2.fromOffset(w, 24), Position = UDim2.new(1, -(x + w), 0.5, -12), Text = "", AutoButtonColor = false, Parent = r}, {corner(4)})
+		if a.primary then bind(b, "BackgroundColor3", "acc") else bind(b, "BackgroundColor3", "bg"); stroke(b, "line", 1) end
+		txt({Size = UDim2.fromScale(1, 1), Text = a.t, TextSize = 9, Parent = b}, false, a.primary and "dark" or "text")
+		b.MouseButton1Click:Connect(function() click(); task.spawn(function() pcall(a.cb) end) end)
+		x = x + w + 6
+	end
+	txt({Size = UDim2.new(1, -(x + 6), 1, 0), Position = UDim2.fromOffset(12, 0), Text = text, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = r})
+end
+local function note(parentF, title, meta, desc)
+	local f = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = T.card, BorderSizePixel = 0, LayoutOrder = ord(parentF), Parent = parentF}, {corner(6)})
+	bind(f, "BackgroundColor3", "card"); stroke(f, "line", 1)
+	local bar = new("Frame", {Size = UDim2.new(0, 2, 1, -16), Position = UDim2.fromOffset(8, 8), BorderSizePixel = 0, Parent = f}, {corner(1)})
+	bind(bar, "BackgroundColor3", "acc")
+	local c = new("Frame", {Size = UDim2.new(1, -28, 0, 0), Position = UDim2.fromOffset(20, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = f},
+		{new("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder}), new("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 9)})})
+	txt({Size = UDim2.new(1, 0, 0, 14), Text = title, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, LayoutOrder = 1, Parent = c}, true)
+	txt({Size = UDim2.new(1, 0, 0, 12), Text = meta, TextSize = 8, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = 2, Parent = c}, false, "sub")
+	txt({Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Text = desc, TextSize = 9, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, LayoutOrder = 3, Parent = c}, false, "sub")
+end
+
+-- criar as abas
+local pg = {}
+pg.about = addPage("about", L("Sobre", "About"), "ⓘ")
+pg.home = addPage("home", L("Painel", "Home"), "⌂")
+pg.auto = addPage("auto", L("Automação", "Automation"), "⚙")
+pg.fruits = addPage("fruits", L("Frutas", "Fruits"), "❖")
+pg.tp = addPage("tp", L("Teleporte", "Teleport"), "➤")
+pg.esp = addPage("esp", "ESP", "◉")
+pg.char = addPage("char", L("Personagem", "Character"), "☻")
+pg.inv = addPage("inv", L("Inventário", "Inventory"), "▤")
+pg.wh = addPage("wh", "Webhook", "✉")
+pg.cfg = addPage("cfg", L("Configurações", "Settings"), "✦")
+
+-- seletor de página (título ▾)
+local pick = new("Frame", {Size = UDim2.fromOffset(190, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = UDim2.fromOffset(142, 38), Visible = false, ZIndex = 30, Parent = main},
+	{corner(6), new("UIListLayout", {Padding = UDim.new(0, 2)}), new("UIPadding", {PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4)})})
+bind(pick, "BackgroundColor3", "card"); stroke(pick, "acc", 1)
+for _, id in ipairs(order) do
+	local b = txt({Size = UDim2.new(1, 0, 0, 26), Text = "  " .. pages[id].label, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, ZIndex = 31, Parent = pick}, false, "text", "TextButton")
+	b.MouseButton1Click:Connect(function() click(); pick.Visible = false; showPage(id) end)
+end
+titleBtn.MouseButton1Click:Connect(function() click(); pick.Visible = not pick.Visible end)
+searchBtn.MouseButton1Click:Connect(function()
+	click()
+	searchBox.Visible = not searchBox.Visible
+	titleBtn.Visible = not searchBox.Visible
+	if searchBox.Visible then searchBox:CaptureFocus() else searchBox.Text = ""; applySearch("") end
+end)
+searchBox:GetPropertyChangedSignal("Text"):Connect(function() applySearch(searchBox.Text) end)
+
+-- nomes (ocultar meu nome)
+local function dname() return S.HideName and L("Oculto", "Hidden") or lp.DisplayName end
+local nameLabels = {}
+local function refreshNames()
+	uname.Text = dname()
+	for _, f in ipairs(nameLabels) do pcall(f) end
+	pcall(function()
+		local h = GM.hum()
+		if h then h.DisplayDistanceType = S.HideName and Enum.HumanoidDisplayDistanceType.None or Enum.HumanoidDisplayDistanceType.Viewer end
+	end)
+end
+track(lp.CharacterAdded:Connect(function() task.wait(1); refreshNames() end))
+
+-- visual de vidro
+local function applyGlass()
+	local g = S.Glass
+	main.BackgroundTransparency = (g == "Off") and 0 or (g == "Soft" and 0.05 or 0.12)
+	mainStroke.Transparency = (g == "Enhanced") and 0.15 or 0.4
+	for _, gr in ipairs(groups) do gr.f.BackgroundTransparency = (g == "Enhanced") and 0.18 or ((g == "Soft") and 0.08 or 0) end
+end
+
+------------------------------------------------------------------
+-- ABA: PAINEL
+------------------------------------------------------------------
+local function openCustomize() end -- definida abaixo
+do
+	local sc = pg.home
+	local banner = new("Frame", {Size = UDim2.new(1, 0, 0, 118), BackgroundColor3 = T.card, BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = ord(sc), Parent = sc}, {corner(6)})
+	stroke(banner, "line", 1)
+	local bg = new("UIGradient", {Rotation = 0, Parent = banner})
+	local function paintBanner() bg.Color = ColorSequence.new(T.card:Lerp(T.acc, 0.24), T.card) end
+	paintBanner()
+	repaints[#repaints + 1] = paintBanner
+	local bt = txt({Size = UDim2.new(1, -150, 0, 26), Position = UDim2.fromOffset(14, 12), Text = "", TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = banner}, true)
+	nameLabels[#nameLabels + 1] = function() bt.Text = L("Bem-vindo de volta, ", "Welcome back, ") .. dname() end
+	txt({Size = UDim2.new(1, -150, 0, 18), Position = UDim2.fromOffset(14, 40), Text = L("Tudo o que você precisa, ao seu alcance.", "Everything you need, within reach."), TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = banner}, false, "sub")
+	local function bbtn(x, w, label, primary, cb)
+		local b = new("TextButton", {Size = UDim2.fromOffset(w, 28), Position = UDim2.fromOffset(x, 78), Text = "", AutoButtonColor = false, Parent = banner}, {corner(4)})
+		if primary then bind(b, "BackgroundColor3", "acc") else bind(b, "BackgroundColor3", "bg"); stroke(b, "line", 1) end
+		txt({Size = UDim2.fromScale(1, 1), Text = label, TextSize = 10, Parent = b}, false, primary and "dark" or "text")
+		b.MouseButton1Click:Connect(function() click(); cb() end)
+	end
+	bbtn(14, 142, L("Preferências de UI  ›", "UI preferences  ›"), true, function() showPage("cfg") end)
+	bbtn(164, 96, L("Personalizar", "Customize"), false, function() openCustomize() end)
+	local bust = new("ImageLabel", {Size = UDim2.fromOffset(112, 112), Position = UDim2.new(1, -122, 1, -114), BackgroundTransparency = 1, Parent = banner})
+	task.spawn(function()
+		local ok, img = pcall(function() return Players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size180x180) end)
+		if ok then bust.Image = img end
+	end)
+
+	local stats = new("Frame", {Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, LayoutOrder = ord(sc), Parent = sc},
+		{new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder})})
+	local function statCard(i, title, fn)
+		local f = new("Frame", {Size = UDim2.new(1 / 3, -6, 1, 0), LayoutOrder = i, BorderSizePixel = 0, Parent = stats}, {corner(6)})
+		bind(f, "BackgroundColor3", "card"); stroke(f, "line", 1)
+		txt({Size = UDim2.new(1, -16, 0, 14), Position = UDim2.fromOffset(10, 8), Text = title, TextSize = 8, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = f}, false, "sub")
+		local v = txt({Size = UDim2.new(1, -16, 0, 18), Position = UDim2.fromOffset(10, 26), Text = "—", TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = f}, true)
+		infos[#infos + 1] = {v, fn}
+	end
+	statCard(1, L("SESSÃO", "SESSION"), function() return GM.clock(tick() - t0) end)
+	statCard(2, L("JOGO ATUAL", "CURRENT GAME"), function() return "Blox Fruits • " .. L("Mar ", "Sea ") .. GM.sea() end)
+	statCard(3, L("NÍVEL / BELI", "LEVEL / BELI"), function() return "Lv " .. GM.fmt(GM.val("Level") or 0) .. " • " .. GM.fmt(GM.val("Beli") or 0) end)
+
+	local cols = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = ord(sc), Parent = sc},
+		{new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder})})
+	local function col(i)
+		return new("Frame", {Size = UDim2.new(0.5, -5, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = i, Parent = cols},
+			{new("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})})
+	end
+	local left, right = col(1), col(2)
+	section(left, L("Seu espaço", "Your space"), L("Ajustes rápidos da interface.", "Quick interface tweaks."))
+	local g = group(left, "home")
+	toggle(g, L("Ocultar meu nome", "Hide my name"), "HideName", refreshNames)
+	toggle(g, L("Reduzir movimento", "Reduced motion"), "ReducedMotion")
+	dropdown(g, L("Material de vidro", "Glass material"), {"Off", "Soft", "Enhanced"}, "Glass", applyGlass)
+	section(right, L("Novidades", "What's new"))
+	note(right, L("Farm e Quests", "Farm & Quests"), "Auto Level • v1.0", L("Quests automáticas do Mar 1 ao 3, boss, elite e coleta.", "Automatic quests across Seas 1-3, boss, elite and collection."))
+	note(right, L("Loja de frutas", "Fruit shop"), "Dealer • v1.0", L("Estoque ao vivo, lista de desejos e compra automática.", "Live stock, wish list and auto-buy."))
+	note(right, "ESP + Webhook", "Extras • v1.0", L("Jogadores, frutas, baús e bosses, com avisos no Discord.", "Players, fruits, chests and bosses, with Discord alerts."))
+	refreshNames()
+end
+
+------------------------------------------------------------------
+-- ABA: SOBRE
+------------------------------------------------------------------
+do
+	local sc = pg.about
+	local gameName = "Blox Fruits"
+	task.spawn(function() local ok, i = pcall(function() return Market:GetProductInfo(game.PlaceId) end) if ok and i.Name then gameName = i.Name end end)
+	section(sc, "Apple Hub · Blox Edition")
+	local g = group(sc, "about")
+	info(g, L("Versão", "Version"), function() return "1.0" end)
+	info(g, L("Jogo", "Game"), function() return gameName end)
+	info(g, L("Jogador", "Player"), function() return dname() end)
+	info(g, L("Servidor", "Server"), function() return #Players:GetPlayers() .. "/" .. Players.MaxPlayers end)
+	info(g, "Executor", function() local ok, n = pcall(identifyexecutor) return ok and tostring(n) or "?" end)
+	info(g, "FPS / Ping", function() return GM.fps .. " fps • " .. math.floor((pcall(function() return Stats.Network.ServerStatsItem["Data Ping"]:GetValue() end) and Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) or 0) .. " ms" end)
+	section(sc, L("Compatibilidade do executor", "Executor compatibility"), L("✔ = disponível, ✘ = indisponível.", "✔ = available, ✘ = missing."))
+	local g2 = group(sc, "about")
+	local caps = {{"writefile / readfile", function() return writefile ~= nil and readfile ~= nil end}, {"setclipboard", function() return setclipboard ~= nil end},
+		{"request / http_request", function() return req ~= nil end}, {"queue_on_teleport", function() return (queue_on_teleport or (syn and syn.queue_on_teleport)) ~= nil end},
+		{"sethiddenproperty", function() return sethiddenproperty ~= nil end}, {"setfpscap", function() return setfpscap ~= nil end}, {"VirtualInputManager", function() return VIM ~= nil end}}
+	for _, c in ipairs(caps) do info(g2, c[1], function() local ok, v = pcall(c[2]) return (ok and v) and "✔" or "✘" end) end
+	function GM.report()
+		local out = {"Apple Hub Blox Edition v1.0", "Lang: " .. lang}
+		local ok, n = pcall(identifyexecutor)
+		out[#out + 1] = "Executor: " .. (ok and tostring(n) or "?")
+		for _, c in ipairs(caps) do local ok2, v = pcall(c[2]) out[#out + 1] = c[1] .. ": " .. ((ok2 and v) and "OK" or "NO") end
+		out[#out + 1] = "Mem: " .. math.floor(Stats:GetTotalMemoryUsageMb()) .. " MB"
+		return table.concat(out, "\n")
+	end
+	local g3 = group(sc, "about")
+	button(g3, L("Copiar relatório de diagnóstico", "Copy diagnostic report"), function() pcall(function() setclipboard(GM.report()) end) toast("Apple Hub", L("Relatório copiado.", "Report copied."), 2) end, true)
+end
+
+------------------------------------------------------------------
+-- ABA: AUTOMAÇÃO
+------------------------------------------------------------------
+do
+	local sc = pg.auto
+	section(sc, "Auto Level", L("Faz as quests sozinho e mata os mobs do seu nível.", "Takes quests automatically and kills mobs for your level."))
+	local g = group(sc, "auto")
+	toggle(g, "Auto Level + Quest", "AutoLevel", nil, L("Quests automáticas por nível", "Automatic quests by level"))
+	info(g, L("Quest atual", "Current quest"), function() local e = GM.questFor(GM.val("Level") or 1) return e and e.mob or "—" end)
+	dropdown(g, L("Arma", "Weapon"), {"Melee", "Sword", "Gun", "Blox Fruit"}, "Weapon")
+	toggle(g, L("Equipar arma automaticamente", "Auto equip weapon"), "AutoEquip")
+	slider(g, L("Velocidade de viagem", "Travel speed"), 100, 600, "TravelSpeed", nil, " st/s")
+	slider(g, L("Altura sobre o mob", "Height above mob"), 4, 25, "Height", nil, " st")
+	section(sc, L("Farm e combate", "Farm & combat"))
+	local g2 = group(sc, "auto")
+	toggle(g2, L("Auto Farm (mob mais próximo)", "Auto Farm (nearest mob)"), "Farm")
+	toggle(g2, L("Auto Click rápido", "Fast auto click"), "Click")
+	slider(g2, L("Delay do ataque", "Attack delay"), 20, 500, "ClickDelay", nil, " ms")
+	toggle(g2, L("Puxar mobs", "Bring mobs"), "Bring")
+	slider(g2, L("Raio de puxar", "Bring radius"), 100, 600, "BringR", nil, " st")
+	toggle(g2, L("Modo seguro", "Safe mode"), "Safe", nil, L("Sobe se o HP ficar baixo", "Rises when HP is low"))
+	slider(g2, L("HP mínimo", "Minimum HP"), 10, 70, "SafePct", nil, "%")
+	toggle(g2, L("Skills automáticas", "Auto skills"), "Skills")
+	input(g2, L("Teclas das skills (ex: Z,X,C)", "Skill keys (e.g. Z,X,C)"), "Z,X", function(t) S.SkillKeys = t; toast("Skills", t, 2) end)
+	slider(g2, L("Intervalo das skills", "Skill interval"), 200, 3000, "SkillDelay", nil, " ms")
+	section(sc, "Boss & Elite")
+	local g3 = group(sc, "auto")
+	dropdown(g3, "Boss", GM.Bosses, "Boss")
+	toggle(g3, "Auto Boss", "AutoBoss", nil, L("Se o boss estiver no mapa", "If the boss is on the map"))
+	toggle(g3, "Auto Elite Hunter", "AutoElite")
+	section(sc, L("Coleta", "Collection"))
+	local g4 = group(sc, "auto")
+	toggle(g4, L("Auto baús", "Auto chests"), "Chest")
+	toggle(g4, L("Auto pegar frutas", "Auto collect fruits"), "FruitGrab")
+	section(sc, L("Haki e status", "Haki & stats"))
+	local g5 = group(sc, "auto")
+	toggle(g5, "Auto Buso Haki", "Buso")
+	toggle(g5, "Auto Ken Haki", "Ken")
+	toggle(g5, "Auto Status", "AutoStats")
+	dropdown(g5, "Status", {"Melee", "Defense", "Sword", "Gun", "Demon Fruit"}, "Stat")
+	slider(g5, L("Pontos por vez", "Points per tick"), 1, 10, "StatPts")
+	section(sc, L("Códigos", "Codes"))
+	local g6 = group(sc, "auto")
+	toggle(g6, L("Resgatar códigos ao iniciar", "Redeem codes on start"), "AutoCodes")
+	button(g6, L("Resgatar todos agora", "Redeem all now"), function() GM.redeemAll() end, true)
+	input(g6, L("Adicionar código", "Add code"), "ABC123", function(c) GM.addCode(c) end)
+	UI.codeLog = para(g6, L("O resultado dos códigos aparece aqui.", "Code results show up here."))
+end
+
+------------------------------------------------------------------
+-- ABA: FRUTAS
+------------------------------------------------------------------
+do
+	local sc = pg.fruits
+	section(sc, L("Loja do Dealer", "Dealer shop"), L("Mostra as frutas à venda agora.", "Shows the fruits for sale right now."))
+	local g = group(sc, "fruits")
+	button(g, L("Atualizar estoque", "Refresh stock"), function() GM.refreshShop() end, true)
+	UI.shopG = group(sc, "fruits")
+	rowItem(UI.shopG, L("Toque em atualizar estoque.", "Tap refresh stock."), {})
+	section(sc, L("Lista de desejos", "Wish list"))
+	local g2 = group(sc, "fruits")
+	input(g2, L("Frutas desejadas (ex: leopard,kitsune)", "Wanted fruits (e.g. leopard,kitsune)"), "leopard,kitsune", function(t) S.Wish = t; toast(L("Loja", "Shop"), t, 2.5) end)
+	info(g2, L("Lista atual", "Current list"), function() return S.Wish end)
+	toggle(g2, L("Comprar sozinho se tiver Beli", "Auto-buy if affordable"), "AutoBuy", nil, L("Verifica a cada 45 s", "Checks every 45 s"))
+	section(sc, L("Coleta de frutas", "Fruit collection"))
+	local g3 = group(sc, "fruits")
+	toggle(g3, L("Auto pegar frutas", "Auto collect fruits"), "FruitGrab")
+	toggle(g3, L("Auto guardar no inventário", "Auto store in inventory"), "AutoStore")
+	toggle(g3, L("Avisar quando fruta nascer", "Notify on fruit spawn"), "FruitNotify")
+	toggle(g3, "Fruit Sniper", "Sniper", nil, L("Troca de servidor até achar fruta", "Hops servers until it finds a fruit"))
+	slider(g3, L("Esperar antes de trocar", "Wait before hopping"), 5, 90, "SniperWait", nil, " s")
+	info(g3, L("Status do sniper", "Sniper status"), function() return GM.sniperStatus or "—" end)
+end
+
+------------------------------------------------------------------
+-- ABA: TELEPORTE
+------------------------------------------------------------------
+do
+	local sc = pg.tp
+	section(sc, L("Mares", "Seas"))
+	local g = group(sc, "tp")
+	button(g, L("Primeiro Mar", "First Sea"), function() GM.invoke("TravelMain") end)
+	button(g, L("Segundo Mar", "Second Sea"), function() GM.invoke("TravelDressrosa") end)
+	button(g, L("Terceiro Mar", "Third Sea"), function() GM.invoke("TravelZou") end)
+	section(sc, L("Zonas do mar atual", "Zones in this sea"))
+	local g2 = group(sc, "tp")
+	if #GM.zoneNames > 0 then
+		dropdown(g2, L("Zona", "Zone"), GM.zoneNames, "Zone")
+		button(g2, L("Viajar até a zona", "Travel to zone"), function()
+			local e = GM.zoneMap[S.Zone]
+			if not e then return end
+			GM.manual = true
+			GM.goTo(CFrame.new(e.m + Vector3.new(0, 6, 0)))
+			GM.manual = false
+		end, true)
+	end
+	section(sc, L("Posições salvas", "Saved positions"))
+	local g3 = group(sc, "tp")
+	input(g3, L("Salvar posição atual", "Save current position"), L("nome", "name"), function(name)
+		local r = GM.root()
+		if not r then return end
+		S.Pos[name] = {math.floor(r.Position.X), math.floor(r.Position.Y), math.floor(r.Position.Z)}
+		GM.refreshPos()
+		toast(L("Posição", "Position"), name, 2)
+	end)
+	UI.posG = group(sc, "tp")
+	function GM.refreshPos()
+		clearGroup(UI.posG)
+		local names = {}
+		for n in pairs(S.Pos) do names[#names + 1] = n end
+		table.sort(names)
+		if #names == 0 then rowItem(UI.posG, L("Nenhuma posição salva.", "No saved positions."), {}) end
+		for _, n in ipairs(names) do
+			local p = S.Pos[n]
+			rowItem(UI.posG, n, {
+				{t = L("Ir", "Go"), primary = true, w = 44, cb = function() GM.manual = true; GM.goTo(CFrame.new(p[1], p[2] + 4, p[3])); GM.manual = false end},
+				{t = "✕", w = 30, cb = function() S.Pos[n] = nil; GM.refreshPos() end},
+			})
+		end
+	end
+	GM.refreshPos()
+	section(sc, L("Jogadores e servidor", "Players & server"))
+	local g4 = group(sc, "tp")
+	input(g4, L("Ir até jogador", "Go to player"), L("nome", "name"), function(name)
+		name = name:lower()
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= lp and (p.Name:lower():find(name, 1, true) or p.DisplayName:lower():find(name, 1, true)) then
+				local hr = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+				if hr then GM.manual = true; GM.goTo(hr.CFrame * CFrame.new(0, 4, 0)); GM.manual = false; return end
+			end
+		end
+		toast(L("Teleporte", "Teleport"), L("Jogador não encontrado.", "Player not found."), 2.5)
+	end)
+	button(g4, L("Ir até a fruta mais próxima", "Go to nearest fruit"), function()
+		local f = GM.fruit()
+		if f then GM.manual = true; GM.goTo(f.Handle.CFrame); GM.manual = false else toast(L("Fruta", "Fruit"), L("Nenhuma no mapa.", "None on the map."), 2) end
+	end)
+	button(g4, L("Trocar de servidor", "Switch server"), function() if not GM.hop() then toast("Server Hop", L("Nenhum servidor encontrado.", "No server found."), 3) end end)
+	button(g4, L("Reentrar no servidor", "Rejoin server"), function() TPS:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp) end)
+	button(g4, L("Copiar Job ID", "Copy Job ID"), function() pcall(function() setclipboard(game.JobId) end) toast("Job ID", L("Copiado.", "Copied."), 2) end)
+	button(g4, L("Resetar personagem", "Reset character"), function() local h = GM.hum() if h then h.Health = 0 end end)
+end
+
+------------------------------------------------------------------
+-- ABA: ESP / PERSONAGEM / INVENTÁRIO / WEBHOOK
+------------------------------------------------------------------
+do
+	local sc = pg.esp
+	section(sc, "ESP")
+	local g = group(sc, "esp")
+	toggle(g, L("Jogadores", "Players"), "EspPlayers", nil, L("Nome, distância e vida", "Name, distance and health"))
+	toggle(g, L("Frutas", "Fruits"), "EspFruits")
+	toggle(g, L("Baús", "Chests"), "EspChests")
+	toggle(g, "Bosses", "EspBosses")
+end
+do
+	local sc = pg.char
+	section(sc, L("Movimento", "Movement"))
+	local g = group(sc, "char")
+	toggle(g, L("Velocidade personalizada", "Custom speed"), "SpeedOn", function(v) if not v then local h = GM.hum() if h then h.WalkSpeed = 16 end end end)
+	slider(g, L("Velocidade", "Speed"), 16, 200, "Speed")
+	toggle(g, L("Pulo personalizado", "Custom jump"), "JumpOn", function(v) if not v then local h = GM.hum() if h then h.JumpPower = 50 end end end)
+	slider(g, L("Força do pulo", "Jump power"), 50, 300, "Jump")
+	toggle(g, L("Voar", "Fly"), "Fly")
+	slider(g, L("Velocidade do voo", "Fly speed"), 20, 200, "FlySpeed")
+	toggle(g, "Noclip", "Noclip")
+	toggle(g, L("Pulo infinito", "Infinite jump"), "InfJump")
+	toggle(g, L("Andar na água", "Walk on water"), "Water", function() GM.applyWater() end)
+	slider(g, L("Gravidade", "Gravity"), 20, 300, "Gravity", function(v) workspace.Gravity = v end)
+	section(sc, L("Ambiente", "Environment"))
+	local g2 = group(sc, "char")
+	toggle(g2, "Fullbright", "Fullbright", function() GM.applyLight() end)
+	toggle(g2, L("Remover neblina", "Remove fog"), "NoFog", function() GM.applyLight() end)
+	slider(g2, L("Campo de visão", "Field of view"), 30, 120, "FOV", function(v) cam.FieldOfView = v end)
+	button(g2, L("Modo desempenho (menos lag)", "Performance mode (less lag)"), function() GM.boost() end)
+	toggle(g2, L("Reconectar se cair", "Rejoin if disconnected"), "AutoRejoin")
+end
+do
+	local sc = pg.inv
+	section(sc, L("Itens que você carrega", "Items you carry"))
+	local g = group(sc, "inv")
+	button(g, L("Atualizar", "Refresh"), function() GM.refreshInv() end, true)
+	UI.invG = group(sc, "inv")
+	function GM.refreshInv()
+		clearGroup(UI.invG)
+		local items = {}
+		local function scan(p, eq) if p then for _, t in ipairs(p:GetChildren()) do if t:IsA("Tool") then items[#items + 1] = {t = t, eq = eq} end end end end
+		scan(lp.Character, true); scan(lp:FindFirstChild("Backpack"), false)
+		table.sort(items, function(a, b) return a.t.Name < b.t.Name end)
+		if #items == 0 then rowItem(UI.invG, L("Nenhum item.", "No items."), {}) return end
+		for i = 1, math.min(#items, 40) do
+			local e = items[i]
+			local acts = {}
+			if not e.eq then acts[#acts + 1] = {t = L("Equipar", "Equip"), primary = true, cb = function() local h = GM.hum() if h and e.t.Parent then h:EquipTool(e.t) end task.delay(0.3, GM.refreshInv) end} end
+			if e.t.ToolTip == "Blox Fruit" then acts[#acts + 1] = {t = L("Guardar", "Store"), cb = function() GM.invoke("StoreFruit", e.t:GetAttribute("OriginalName") or e.t.Name, e.t); task.delay(0.6, GM.refreshInv) end} end
+			rowItem(UI.invG, e.t.Name .. "  •  " .. ((e.t.ToolTip ~= "") and e.t.ToolTip or "Item") .. (e.eq and " ✓" or ""), acts)
+		end
+	end
+	GM.refreshInv()
+end
+do
+	local sc = pg.wh
+	section(sc, L("Avisos no Discord", "Discord alerts"), L("A URL fica salva só neste aparelho.", "The URL is saved only on this device."))
+	local g = group(sc, "wh")
+	input(g, L("URL do webhook", "Webhook URL"), "https://discord.com/api/webhooks/...", function(u)
+		GM.whUrl = u
+		pcall(function() writefile("AppleBlox_webhook.txt", u) end)
+		toast("Webhook", L("URL salva.", "URL saved."), 2)
+	end)
+	toggle(g, L("Enviar avisos", "Send alerts"), "WhOn")
+	toggle(g, L("Fruta spawnou", "Fruit spawned"), "WhFruit")
+	toggle(g, L("Boss apareceu", "Boss appeared"), "WhBoss")
+	toggle(g, "Level up", "WhLevel")
+	slider(g, L("Resumo automático (0 = off)", "Auto summary (0 = off)"), 0, 120, "WhEvery", nil, " min")
+	button(g, L("Enviar teste", "Send test"), function()
+		local ok = GM.webhook("✅ Apple Hub", L("Webhook conectado!", "Webhook connected!"), 5763719, true)
+		toast("Webhook", ok and L("Teste enviado.", "Test sent.") or L("Configure uma URL https:// válida.", "Set a valid https:// URL."), 3)
+	end, true)
+	button(g, L("Enviar resumo agora", "Send summary now"), function() GM.summary() end)
+end
+
+------------------------------------------------------------------
+-- ABA: CONFIGURAÇÕES
+------------------------------------------------------------------
+do
+	local sc = pg.cfg
+	section(sc, L("Movimento da janela", "Window movement"))
+	local g = group(sc, "cfg")
+	dropdown(g, L("Estilo de arrastar", "Drag style"), {"Smooth", "Instant"}, "DragStyle")
+	toggle(g, L("Reduzir movimento", "Reduced motion"), "ReducedMotion")
+	button(g, L("Resetar posições flutuantes", "Reset all floating positions"), function()
+		for _, d in ipairs(drags) do d.goal = d.home; d.t.Position = d.home end
+		toast("Apple Hub", L("Posições restauradas.", "Positions restored."), 2)
+	end)
+	section(sc, L("Sons da interface", "Interface sounds"), L("Sons suaves para cliques e confirmações.", "Gentle cues for clicks and confirmations."))
+	local g2 = group(sc, "cfg")
+	toggle(g2, L("Runas reativas à música", "Music-reactive runes"), "RuneReact", nil, L("Seguem suavemente a música do jogo", "Softly follow game music"))
+	toggle(g2, L("Partículas flutuantes", "Floating sparks"), "Runes")
+	toggle(g2, L("Sons da interface", "Interface sounds"), "Sounds")
+	slider(g2, L("Volume dos sons", "Sound volume"), 5, 100, "Volume", nil, "%")
+	section(sc, L("Aparência", "Appearance"))
+	local g3 = group(sc, "cfg")
+	dropdown(g3, L("Material de vidro", "Glass material"), {"Off", "Soft", "Enhanced"}, "Glass", applyGlass)
+	dropdown(g3, L("Cor de destaque", "Accent color"), ACC_ORDER, "Accent", setAccent)
+	dropdown(g3, L("Fonte", "Font"), {"Pixel", "Clean", "Mono"}, "Font", applyFont)
+	slider(g3, L("Tamanho do painel", "Panel size"), 60, 130, "ScalePct", function(v) uis.Scale = v / 100 end, "%")
+	dropdown(g3, L("Tecla de mostrar/esconder", "Show/hide key"), {"RightShift", "RightControl", "LeftAlt", "Insert", "K", "M", "P"}, "ToggleKey")
+	dropdown(g3, L("Idioma (reabra o hub)", "Language (reopen hub)"), {"pt", "en"}, "Lang")
+	section(sc, L("Dados", "Data"))
+	local g4 = group(sc, "cfg")
+	button(g4, L("Salvar configurações", "Save settings"), function()
+		local ok = pcall(function() writefile(FILE, HS:JSONEncode(S)) end)
+		toast("Config", ok and L("Salvo!", "Saved!") or L("Seu executor não salva arquivos.", "Your executor can't save files."), 3)
+	end, true)
+	button(g4, L("Apagar configurações salvas", "Delete saved settings"), function()
+		pcall(function() if isfile(FILE) then delfile(FILE) end end)
+		toast("Config", L("Apagado. Reabra o hub.", "Deleted. Reopen the hub."), 3)
+	end)
+	button(g4, L("Descarregar hub", "Unload hub"), function() if getgenv and getgenv().AppleBloxUnload then getgenv().AppleBloxUnload() end end)
+end
+
+------------------------------------------------------------------
+-- PERSONALIZAR (cor e fonte)
+------------------------------------------------------------------
+do
+	local cust
+	openCustomize = function()
+		if cust then cust.Visible = not cust.Visible return end
+		cust = new("Frame", {Size = UDim2.fromOffset(300, 170), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 66, 0.5, 0), ZIndex = 40, Parent = main}, {corner(8)})
+		bind(cust, "BackgroundColor3", "card"); stroke(cust, "acc", 1.5)
+		txt({Size = UDim2.new(1, -20, 0, 24), Position = UDim2.fromOffset(14, 8), Text = L("Personalizar", "Customize"), TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 41, Parent = cust}, true)
+		txt({Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(14, 36), Text = L("COR DE DESTAQUE", "ACCENT COLOR"), TextSize = 8, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 41, Parent = cust}, false, "sub")
+		local sw = {}
+		for i, n in ipairs(ACC_ORDER) do
+			local b = new("TextButton", {Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(14 + (i - 1) * 38, 54), BackgroundColor3 = ACCENTS[n], Text = "", AutoButtonColor = false, ZIndex = 41, Parent = cust}, {corner(14)})
+			local st = new("UIStroke", {Color = white, Thickness = 2, Enabled = (S.Accent == n), Parent = b})
+			sw[n] = st
+			b.MouseButton1Click:Connect(function() click(); setAccent(n); for k, s in pairs(sw) do s.Enabled = (k == n) end end)
+		end
+		txt({Size = UDim2.new(1, -20, 0, 14), Position = UDim2.fromOffset(14, 94), Text = L("FONTE", "FONT"), TextSize = 8, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 41, Parent = cust}, false, "sub")
+		for i, n in ipairs({"Pixel", "Clean", "Mono"}) do
+			local b = new("TextButton", {Size = UDim2.fromOffset(84, 26), Position = UDim2.fromOffset(14 + (i - 1) * 92, 112), Text = "", AutoButtonColor = false, ZIndex = 41, Parent = cust}, {corner(4)})
+			bind(b, "BackgroundColor3", "bg"); stroke(b, "line", 1)
+			txt({Size = UDim2.fromScale(1, 1), Text = n, TextSize = 10, ZIndex = 42, Parent = b})
+			b.MouseButton1Click:Connect(function() click(); S.Font = n; applyFont(); syncAll() end)
+		end
+		local x = txt({Size = UDim2.fromOffset(24, 24), Position = UDim2.new(1, -30, 0, 6), Text = "✕", TextSize = 12, ZIndex = 41, Parent = cust}, false, "sub", "TextButton")
+		x.MouseButton1Click:Connect(function() cust.Visible = false end)
+	end
+end
+
+------------------------------------------------------------------
+-- LOOPS DO JOGO
+------------------------------------------------------------------
+GM.fps, GM.frames = 0, 0
+track(RS.RenderStepped:Connect(function() GM.frames = GM.frames + 1 end))
+GM.loop(1, function() GM.fps = GM.frames; GM.frames = 0 end)
+function GM.summary()
+	GM.webhook("📊 " .. L("Resumo da sessão", "Session summary"), L("Tempo: ", "Time: ") .. GM.clock(tick() - t0) .. "\nLevel: " .. GM.fmt(GM.val("Level") or 0) .. " (+" .. GM.gain("Level") .. ")\nBeli: " ..
+		GM.fmt(GM.val("Beli") or 0) .. " (+" .. GM.fmt(GM.gain("Beli")) .. ")\nBeli/h: " .. GM.fmt(GM.rate("Beli")), 3447003, true)
+end
+function GM.buyFruit(name)
+	local r = GM.invoke("PurchaseRawFruit", name)
+	toast(L("Loja", "Shop"), GM.short(name) .. ": " .. (r ~= nil and tostring(r) or L("sem resposta", "no answer")), 3)
+end
+function GM.refreshShop()
+	local list = GM.fetchStock()
+	clearGroup(UI.shopG)
+	if not list then rowItem(UI.shopG, L("Não consegui ler a loja.", "Could not read the shop."), {}) return end
+	if #list == 0 then rowItem(UI.shopG, L("Loja vazia.", "Shop is empty."), {}) end
+	for _, f in ipairs(list) do
+		rowItem(UI.shopG, GM.short(f.name) .. "  •  " .. GM.fmt(f.price), {{t = L("Comprar", "Buy"), primary = true, cb = function() GM.buyFruit(f.name) end}})
+	end
+end
+GM.Codes = {"Sub2UncleKizaru", "Sub2Fer999", "Enyu_is_Pro", "Magicbus", "JCWK", "Starcodeheo", "Bluxxy", "fudd10", "FUDD10_V2", "Bignews", "TheGreatAce",
+	"Sub2NoobMaster123", "Sub2Daigrock", "Axiore", "StrawHatMaine", "KITT_RESET", "Sub2OfficialNoobie", "NOMOREHACK", "BANEXPLOIT", "TRIPLEABUSE", "NEWTROLL",
+	"CODE_SERVICE", "SECRET_ADMIN", "3BVISITS", "2BILLION", "1MLIKES"}
+GM.codeLines = {}
+function GM.logCode(line)
+	GM.codeLines[#GM.codeLines + 1] = line
+	while #GM.codeLines > 6 do table.remove(GM.codeLines, 1) end
+	if UI.codeLog then UI.codeLog.Text = table.concat(GM.codeLines, "\n") end
+end
+function GM.redeemOne(code)
+	local rem = RepS:FindFirstChild("Remotes")
+	local rd = rem and rem:FindFirstChild("Redeem")
+	if not rd then GM.logCode(code .. " → remote?") return end
+	local ok, res = pcall(function() return rd:InvokeServer(code) end)
+	GM.logCode(code .. " → " .. string.sub(ok and tostring(res) or "falhou", 1, 30))
+end
+function GM.redeemAll()
+	if GM.redeeming then return end
+	GM.redeeming = true
+	toast(L("Códigos", "Codes"), L("Resgatando...", "Redeeming..."), 2.5)
+	for _, c in ipairs(GM.Codes) do if not alive then break end GM.redeemOne(c); task.wait(1.4) end
+	GM.redeeming = false
+	toast(L("Códigos", "Codes"), L("Terminei.", "Done."), 2.5)
+end
+function GM.addCode(c) GM.Codes[#GM.Codes + 1] = c; task.spawn(function() GM.redeemOne(c) end) end
+
+local origLight = {Brightness = Lighting.Brightness, FogEnd = Lighting.FogEnd, GlobalShadows = Lighting.GlobalShadows, Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient}
+function GM.applyLight()
+	if S.Fullbright then
+		Lighting.Brightness, Lighting.GlobalShadows = 2, false
+		Lighting.Ambient, Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200), Color3.fromRGB(200, 200, 200)
+	else
+		Lighting.Brightness, Lighting.GlobalShadows = origLight.Brightness, origLight.GlobalShadows
+		Lighting.Ambient, Lighting.OutdoorAmbient = origLight.Ambient, origLight.OutdoorAmbient
+	end
+	Lighting.FogEnd = S.NoFog and 1e6 or origLight.FogEnd
+end
+function GM.applyWater()
+	pcall(function()
+		local w = workspace.Map["WaterBase-Plane"]
+		GM.waterOrig = GM.waterOrig or w.Size
+		w.Size = S.Water and Vector3.new(1000, 112, 1000) or GM.waterOrig
+	end)
+end
+function GM.boost()
+	pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Level01 end)
+	Lighting.GlobalShadows = false
+	for _, d in ipairs(workspace:GetDescendants()) do
+		if d:IsA("ParticleEmitter") or d:IsA("Trail") or d:IsA("Smoke") or d:IsA("Fire") or d:IsA("Sparkles") then d.Enabled = false
+		elseif d:IsA("BasePart") then d.CastShadow = false end
+	end
+	toast("FPS", L("Modo desempenho ativado.", "Performance mode on."), 2.5)
+end
+
+function GM.start()
+	local lastQuest, lastAbandon, lastElite = 0, 0, 0
+	GM.loop(0.1, function()
+		if not S.AutoLevel then return end
+		local r = GM.root()
+		if not r then return end
+		if S.AutoEquip then GM.equip() end
+		local e = GM.questFor(GM.val("Level") or 1)
+		if not e then local t = GM.nearest() if t then GM.hoverTo(t.Position); GM.bring(t) end return end
+		local vis, title = false, ""
+		pcall(function() vis = lp.PlayerGui.Main.Quest.Visible end)
+		pcall(function() title = tostring(lp.PlayerGui.Main.Quest.Container.QuestTitle.Title.Text) end)
+		if vis and not title:lower():find(e.mob:sub(1, 5):lower(), 1, true) and tick() - lastAbandon > 15 then
+			GM.invoke("AbandonQuest"); lastAbandon = tick(); vis = false
+		end
+		if not vis then
+			if tick() - lastQuest > 1.5 then
+				GM.goTo(CFrame.new(e.q + Vector3.new(0, 3, 0)))
+				task.wait(0.3)
+				GM.invoke("StartQuest", e.qn, e.ql)
+				lastQuest = tick()
+			end
+			return
+		end
+		local t = GM.nearest(e.mob)
+		if t then GM.hoverTo(t.Position); GM.bring(t) else GM.goTo(CFrame.new(e.m + Vector3.new(0, S.Height, 0))) end
+	end)
+	GM.loop(0.02, function()
+		if not S.Farm or S.AutoLevel or not GM.root() then return end
+		if S.AutoEquip then GM.equip() end
+		local t = GM.nearest()
+		if t then GM.hoverTo(t.Position); GM.bring(t) end
+	end)
+	GM.loop(0.05, function()
+		if not S.AutoBoss or S.AutoLevel or not GM.root() then return end
+		if S.AutoEquip then GM.equip() end
+		local t = GM.nearest(S.Boss)
+		if t then GM.hoverTo(t.Position) end
+	end)
+	GM.loop(0.1, function()
+		if not S.AutoElite or S.AutoLevel or not GM.root() then return end
+		if S.AutoEquip then GM.equip() end
+		local t
+		for _, n in ipairs(GM.Elite) do t = GM.nearest(n) if t then break end end
+		if t then GM.hoverTo(t.Position); GM.bring(t)
+		elseif tick() - lastElite > 6 then lastElite = tick(); GM.invoke("EliteHunter") end
+	end)
+	task.spawn(function()
+		while alive do
+			task.wait(math.max(S.ClickDelay, 20) / 1000)
+			if (S.Click or S.Farm or S.AutoLevel or S.AutoBoss or S.AutoElite) and not GM.safeUp then
+				pcall(function() VU:CaptureController(); VU:ClickButton1(Vector2.new(900, 500)) end)
+			end
+		end
+	end)
+	task.spawn(function()
+		while alive do
+			task.wait(math.max(S.SkillDelay, 200) / 1000)
+			if S.Skills and not GM.safeUp then
+				for tok in S.SkillKeys:gmatch("[^,%s]+") do
+					local ok, kc = pcall(function() return Enum.KeyCode[tok:upper()] end)
+					if ok and kc then
+						pcall(function() VIM:SendKeyEvent(true, kc, false, game) task.wait(0.06) VIM:SendKeyEvent(false, kc, false, game) end)
+						task.wait(0.15)
+					end
+				end
+			end
+		end
+	end)
+	GM.loop(0.2, function()
+		local h = GM.hum()
+		if not S.Safe or not h then GM.safeUp = false return end
+		local pct = h.Health / math.max(h.MaxHealth, 1) * 100
+		if pct < S.SafePct then GM.safeUp = true elseif pct > 85 then GM.safeUp = false end
+	end)
+	GM.loop(0.3, function()
+		if not S.Chest then return end
+		local r = GM.root()
+		if not r then return end
+		local best, bd
+		for _, c in ipairs(CS:GetTagged("_ChestTagged")) do
+			if c.Parent then
+				local p = c:GetPivot().Position
+				local d = (p - r.Position).Magnitude
+				if not bd or d < bd then best, bd = p, d end
+			end
+		end
+		if best then GM.goTo(CFrame.new(best + Vector3.new(0, 2, 0))) end
+	end)
+	GM.loop(0.6, function() if S.FruitGrab then local f = GM.fruit() if f then GM.goTo(f.Handle.CFrame) end end end)
+	local lastF
+	GM.loop(2, function()
+		local f = GM.fruit()
+		if f and f ~= lastF then
+			lastF = f
+			if S.FruitNotify then toast(L("Fruta spawnou!", "Fruit spawned!"), f.Name, 5) end
+			if S.WhFruit then GM.webhook("🍎 " .. L("Fruta spawnou", "Fruit spawned"), f.Name, 15844367) end
+		elseif not f then lastF = nil end
+	end)
+	GM.loop(3, function()
+		if not S.AutoStore then return end
+		local bp = lp:FindFirstChild("Backpack")
+		if not bp then return end
+		for _, t in ipairs(bp:GetChildren()) do
+			if t:IsA("Tool") and t.ToolTip == "Blox Fruit" then GM.invoke("StoreFruit", t:GetAttribute("OriginalName") or t.Name, t) end
+		end
+	end)
+	GM.loop(45, function()
+		if not S.AutoBuy then return end
+		local list = GM.fetchStock()
+		if not list then return end
+		local beli = GM.val("Beli") or 0
+		for _, f in ipairs(list) do
+			local n = GM.short(f.name):lower()
+			for w in S.Wish:gmatch("[^,]+") do
+				w = w:match("^%s*(.-)%s*$"):lower()
+				if w ~= "" and n:find(w, 1, true) and f.price <= beli then
+					GM.buyFruit(f.name)
+					GM.webhook("🛒 " .. L("Fruta comprada", "Fruit bought"), GM.short(f.name) .. " • " .. GM.fmt(f.price), 15844367)
+					return
+				end
+			end
+		end
+	end)
+	local noFruit, lastHop, grabbing = nil, 0, false
+	GM.loop(1, function()
+		if not S.Sniper then noFruit = nil; GM.sniperStatus = L("desligado", "off") return end
+		local f = GM.fruit()
+		if f then
+			noFruit = nil
+			GM.sniperStatus = f.Name
+			if not grabbing then
+				grabbing = true
+				task.spawn(function() GM.manual = true; pcall(GM.goTo, f.Handle.CFrame); GM.manual = false; task.wait(1); grabbing = false end)
+			end
+		else
+			noFruit = noFruit or tick()
+			local w = tick() - noFruit
+			GM.sniperStatus = L("sem fruta há ", "no fruit for ") .. math.floor(w) .. "s"
+			if w >= S.SniperWait and tick() - lastHop > 25 then lastHop = tick(); noFruit = nil; GM.hop() end
+		end
+	end)
+	GM.loop(1.5, function() if S.Buso and lp.Character and not lp.Character:FindFirstChild("HasBuso") then GM.invoke("Buso") end end)
+	GM.loop(4, function()
+		if S.Ken then
+			local rem = RepS:FindFirstChild("Remotes")
+			local ce = rem and rem:FindFirstChild("CommE")
+			if ce then ce:FireServer("Ken", true) end
+		end
+	end)
+	GM.loop(1, function() if S.AutoStats then GM.invoke("AddPoint", S.Stat, S.StatPts) end end)
+	-- webhook: boss, level e resumo
+	local lastLv, lastBoss, lastSum = nil, {}, tick()
+	GM.loop(3, function()
+		local lvl = GM.val("Level")
+		if lvl then
+			if lastLv and lvl > lastLv and S.WhLevel then GM.webhook("⬆ Level up!", "Level **" .. lvl .. "**", 5763719) end
+			lastLv = lvl
+		end
+		local folder = workspace:FindFirstChild("Enemies")
+		if folder and S.WhBoss then
+			for _, m in ipairs(folder:GetChildren()) do
+				if GM.BossSet[m.Name] and not lastBoss[m] then lastBoss[m] = true; GM.webhook("👑 Boss", m.Name, 10181046) end
+			end
+			for m in pairs(lastBoss) do if not m.Parent then lastBoss[m] = nil end end
+		end
+		if S.WhOn and S.WhEvery > 0 and tick() - lastSum >= S.WhEvery * 60 then lastSum = tick(); GM.summary() end
+	end)
+	-- ESP
+	local espFolder = new("Folder", {Name = "ESP", Parent = gui})
+	local cache = {}
+	local function sync(kind, on, targets)
+		cache[kind] = cache[kind] or {}
+		local c, seen = cache[kind], {}
+		if on then
+			for _, t in ipairs(targets()) do
+				seen[t.inst] = true
+				local e = c[t.inst]
+				if not e then
+					local hl = new("Highlight", {Adornee = t.inst, FillTransparency = 0.65, OutlineTransparency = 0, FillColor = t.color, OutlineColor = t.color, DepthMode = Enum.HighlightDepthMode.AlwaysOnTop, Parent = espFolder})
+					local bb = new("BillboardGui", {Adornee = t.part, Size = UDim2.fromOffset(150, 28), AlwaysOnTop = true, StudsOffset = Vector3.new(0, 3, 0), Parent = espFolder})
+					local lb = new("TextLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, TextColor3 = t.color, TextStrokeTransparency = 0.4, TextSize = 12, Font = Enum.Font.GothamBold, Parent = bb})
+					e = {hl, bb, lb}
+					c[t.inst] = e
+				end
+				e[3].Text = t.text
+			end
+		end
+		for inst, e in pairs(c) do
+			if not seen[inst] or not inst.Parent then pcall(function() e[1]:Destroy(); e[2]:Destroy() end); c[inst] = nil end
+		end
+	end
+	local function dist(p) local r = GM.root() return r and math.floor((p - r.Position).Magnitude) or 0 end
+	GM.loop(0.5, function()
+		sync("pl", S.EspPlayers, function()
+			local list = {}
+			for _, p in ipairs(Players:GetPlayers()) do
+				local ch = p.Character
+				local hr, h = ch and ch:FindFirstChild("HumanoidRootPart"), ch and ch:FindFirstChildOfClass("Humanoid")
+				if p ~= lp and hr and h and #list < 25 then
+					list[#list + 1] = {inst = ch, part = hr, color = Color3.fromRGB(255, 90, 90), text = p.DisplayName .. " [" .. dist(hr.Position) .. "m] " .. math.floor(h.Health) .. "HP"}
+				end
+			end
+			return list
+		end)
+		sync("fr", S.EspFruits, function()
+			local list = {}
+			for _, v in ipairs(workspace:GetChildren()) do
+				if (v:IsA("Tool") or v:IsA("Model")) and v.Name:lower():find("fruit") and v:FindFirstChild("Handle") then
+					list[#list + 1] = {inst = v, part = v.Handle, color = Color3.fromRGB(255, 196, 60), text = v.Name .. " [" .. dist(v.Handle.Position) .. "m]"}
+				end
+			end
+			return list
+		end)
+		sync("ch", S.EspChests, function()
+			local list = {}
+			for _, c in ipairs(CS:GetTagged("_ChestTagged")) do
+				if c.Parent and #list < 20 then
+					local part = c:IsA("BasePart") and c or c:FindFirstChildWhichIsA("BasePart", true)
+					if part then list[#list + 1] = {inst = c, part = part, color = Color3.fromRGB(90, 220, 255), text = L("Baú", "Chest") .. " [" .. dist(part.Position) .. "m]"} end
+				end
+			end
+			return list
+		end)
+		sync("bo", S.EspBosses, function()
+			local list = {}
+			local folder = workspace:FindFirstChild("Enemies")
+			if folder then
+				for _, m in ipairs(folder:GetChildren()) do
+					local mr = m:FindFirstChild("HumanoidRootPart")
+					if GM.BossSet[m.Name] and mr then list[#list + 1] = {inst = m, part = mr, color = Color3.fromRGB(190, 90, 255), text = "BOSS " .. m.Name .. " [" .. dist(mr.Position) .. "m]"} end
+				end
+			end
+			return list
+		end)
+	end)
+	-- personagem
+	local flyBV, holdBV
+	local function stopFly() if flyBV then flyBV:Destroy() flyBV = nil end end
+	local function stopHold() if holdBV then holdBV:Destroy() holdBV = nil end end
+	GM.stopMove = function() stopFly(); stopHold() end
+	track(RS.Heartbeat:Connect(function()
+		local c, h, r = lp.Character, GM.hum(), GM.root()
+		if not c or not h or not r then return end
+		if S.SpeedOn then h.WalkSpeed = S.Speed end
+		if S.JumpOn then h.UseJumpPower = true; h.JumpPower = S.Jump end
+		if S.Fly then
+			stopHold()
+			if not flyBV or flyBV.Parent ~= r then
+				stopFly()
+				flyBV = Instance.new("BodyVelocity")
+				flyBV.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+				flyBV.Velocity = Vector3.zero
+				flyBV.Parent = r
+			end
+			local md, look = h.MoveDirection, cam.CFrame.LookVector
+			local vel = md * S.FlySpeed
+			if md.Magnitude > 0 then
+				local s = md:Dot(Vector3.new(look.X, 0, look.Z))
+				vel = vel + Vector3.new(0, look.Y * S.FlySpeed * (s >= 0 and 1 or -1), 0)
+			end
+			flyBV.Velocity = vel
+		else
+			stopFly()
+			if GM.anyAuto() then
+				if not holdBV or holdBV.Parent ~= r then
+					stopHold()
+					holdBV = Instance.new("BodyVelocity")
+					holdBV.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+					holdBV.Velocity = Vector3.zero
+					holdBV.Parent = r
+				end
+			else stopHold() end
+		end
+	end))
+	track(RS.Stepped:Connect(function()
+		if (S.Noclip or GM.anyAuto()) and lp.Character then
+			for _, p in ipairs(lp.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end
+		end
+	end))
+	track(UIS.JumpRequest:Connect(function() if S.InfJump then local h = GM.hum() if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end end end))
+	track(lp.Idled:Connect(function() VU:CaptureController(); VU:ClickButton1(Vector2.new()) end))
+	track(GuiService.ErrorMessageChanged:Connect(function() if S.AutoRejoin then task.wait(2); pcall(function() TPS:Teleport(game.PlaceId, lp) end) end end))
+	if S.AutoCodes then task.delay(5, GM.redeemAll) end
+	GM.applyLight(); GM.applyWater()
+	cam.FieldOfView = S.FOV
+end
+GM.start()
+
+-- atualização dos valores ao vivo
+GM.loop(1, function()
+	for _, e in ipairs(infos) do
+		local ok, v = pcall(e[2])
+		e[1].Text = ok and tostring(v) or "—"
+	end
+end)
+
+------------------------------------------------------------------
+-- MOSTRAR / ESCONDER, LAUNCHER E ABERTURA
+------------------------------------------------------------------
+local function setShown(v)
+	shown = v
+	if v then
+		main.Visible = true
+		tw(main, 0.3, {GroupTransparency = 0})
+		tw(uis, 0.35, {Scale = S.ScalePct / 100}, Enum.EasingStyle.Back)
+	else
+		tw(main, 0.2, {GroupTransparency = 1})
+		tw(uis, 0.2, {Scale = S.ScalePct / 100 * 0.94})
+		task.delay(0.22, function() if not shown then main.Visible = false end end)
+	end
+end
+local launcher = new("TextButton", {Size = UDim2.fromOffset(46, 46), Position = UDim2.new(0, 14, 0, 92), Text = "", AutoButtonColor = false, ZIndex = 5, Parent = gui}, {corner(8)})
+bind(launcher, "BackgroundColor3", "bg"); stroke(launcher, "acc", 1)
+txt({Size = UDim2.fromScale(1, 1), Text = "✦", TextSize = 24, ZIndex = 6, Parent = launcher}, true, "acc")
+local ld = makeDrag(launcher, launcher)
+launcher.MouseButton1Click:Connect(function() if not ld.moved then click(); setShown(not shown) end end)
+minBtn.MouseButton1Click:Connect(function() click(); pick.Visible = false; setShown(false) end)
+makeDrag(top, main)
+track(UIS.InputBegan:Connect(function(i, gp)
+	if not gp and i.KeyCode.Name == S.ToggleKey then setShown(not shown) end
+end))
+
+local function unload()
+	alive = false
+	for _, k in ipairs({"AutoLevel", "Farm", "AutoBoss", "AutoElite", "Chest", "FruitGrab", "Fly", "Fullbright", "NoFog", "Water"}) do S[k] = false end
+	pcall(GM.applyLight); pcall(GM.applyWater); pcall(function() if GM.stopMove then GM.stopMove() end end)
+	pcall(function() workspace.Gravity = 196.2 end)
+	for _, c in ipairs(conns) do pcall(function() c:Disconnect() end) end
+	pcall(function() gui:Destroy() end)
+end
+if getgenv then getgenv().AppleBloxUnload = unload end
+
+-- abertura (splash curta)
+applyGlass()
+setAccent(S.Accent)
+applyFont()
+showPage("home")
+do
+	local sp = new("CanvasGroup", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(14, 11, 10), GroupTransparency = 1, ZIndex = 100, Active = true, Parent = gui})
+	txt({Size = UDim2.fromScale(1, 0.14), Position = UDim2.fromScale(0, 0.34), Text = "✦", TextSize = 44, ZIndex = 101, Parent = sp}, true, "acc")
+	txt({Size = UDim2.fromScale(1, 0.07), Position = UDim2.fromScale(0, 0.5), Text = "APPLE HUB", TextSize = 22, ZIndex = 101, Parent = sp}, true)
+	txt({Size = UDim2.fromScale(1, 0.05), Position = UDim2.fromScale(0, 0.57), Text = "Blox Fruits Edition", TextSize = 11, ZIndex = 101, Parent = sp}, false, "sub")
+	local bar = new("Frame", {Size = UDim2.fromOffset(160, 3), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.66), BackgroundColor3 = T.off, BorderSizePixel = 0, ZIndex = 101, Parent = sp}, {corner(2)})
+	local fill = new("Frame", {Size = UDim2.fromScale(0, 1), BorderSizePixel = 0, ZIndex = 102, Parent = bar}, {corner(2)})
+	bind(fill, "BackgroundColor3", "acc")
+	tw(sp, 0.35, {GroupTransparency = 0})
+	tw(fill, 1.3, {Size = UDim2.fromScale(1, 1)}, Enum.EasingStyle.Quad)
+	task.delay(1.6, function()
+		setShown(true)
+		tw(sp, 0.5, {GroupTransparency = 1})
+		task.delay(0.6, function() pcall(function() sp:Destroy() end) end)
+		toast("Apple Hub", L("Carregado! Bom jogo ✦", "Loaded! Have fun ✦"), 3)
+	end)
+end
