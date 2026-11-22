@@ -1664,7 +1664,13 @@ do
 		toast("Apple Hub", L("Carregado! Bom jogo ✦", "Loaded! Have fun ✦"), 3)
 	end)
 end
--- ===== APPLE BLOX · PARTE 2 (cole logo ABAIXO do script do painel, no MESMO script) =====
+AHX.FONTS + 1] = n
+		end
+	end
+end)()
+-- ===== APPLE BLOX · PARTE 2 COMPLETA =====
+-- Cole logo abaixo do script principal do painel
+
 local AHX = {hidden = {auto = true, fruits = true, esp = true, char = true}}
 
 ------------------------------------------------------------------
@@ -1676,65 +1682,135 @@ local AHX = {hidden = {auto = true, fruits = true, esp = true, char = true}}
 		AHX.fail = true
 		return
 	end
+
 	AHX.NEW = {
-		Theme = "Copper", ThemeAuto = false, DayTheme = "Apple", NightTheme = "Midnight", UseCustomAcc = false, AccR = 196, AccG = 149, AccB = 108,
-		Compact = false, Focus = false, Density = "Normal", TouchBig = false, SwipeTabs = true, LongPress = true, Haptic = true, ToastInside = true,
-		GlassAlpha = 12, Blur = false, BlurSize = 10, Cards3D = true, Stagger = true, Skeleton = true, PartType = "Runes",
-		Ambient = false, AmbientId = "", AmbientVol = 20, UpdateUrl = "", TabOrder = {}, Fav = {}, SaveCheck = true,
+		Theme = "Copper",
+		ThemeAuto = false,
+		DayTheme = "Apple",
+		NightTheme = "Midnight",
+		UseCustomAcc = false,
+		AccR = 196, AccG = 149, AccB = 108,
+		Compact = false,
+		Focus = false,
+		Density = "Normal",
+		TouchBig = false,
+		SwipeTabs = true,
+		LongPress = true,
+		Haptic = true,
+		ToastInside = true,
+		GlassAlpha = 12,
+		Blur = false,
+		BlurSize = 10,
+		Cards3D = true,
+		Stagger = true,
+		Skeleton = true,
+		PartType = "Runes",
+		Ambient = false,
+		AmbientId = "",
+		AmbientVol = 20,
+		UpdateUrl = "",
+		TabOrder = {},
+		Fav = {},
+		SaveCheck = true,
 	}
-	for k, v in pairs(AHX.NEW) do if S[k] == nil then S[k] = v end end
+
+	for k, v in pairs(AHX.NEW) do
+		if S[k] == nil then S[k] = v end
+	end
+
 	pcall(function()
 		if isfile and isfile(FILE) then
 			local d = HS:JSONDecode(readfile(FILE))
-			for k, v in pairs(AHX.NEW) do if d[k] ~= nil and type(d[k]) == type(v) then S[k] = d[k] end end
+			for k, v in pairs(AHX.NEW) do
+				if d[k] \~= nil and type(d[k]) == type(v) then
+					S[k] = d[k]
+				end
+			end
 		end
 	end)
-	local function C(h) return Color3.fromHex(h) end
+
+	local function C(h)
+		return Color3.fromHex(h)
+	end
 	AHX.C = C
-	local function Th(bg, side, card, line, text, sub, off, dark, acc) return {bg = bg, side = side, card = card, line = line, text = text, sub = sub, off = off, dark = dark, acc = acc} end
+
+	local function Th(bg, side, card, line, text, sub, off, dark, acc)
+		return {
+			bg = bg, side = side, card = card, line = line,
+			text = text, sub = sub, off = off, dark = dark, acc = acc
+		}
+	end
+
 	AHX.THEMES = {
-		Copper = Th("#181412", "#1d1916", "#221d1a", "#322b26", "#ece4dc", "#8c8279", "#3e3732", "#1c1510", "#c4956c"),
-		Apple = Th("#101112", "#151617", "#1a1b1d", "#2a2c2f", "#f5f5f7", "#8e8e93", "#3a3a3c", "#0b1a0c", "#8bd17c"),
-		Mist = Th("#f5f5f7", "#ebebee", "#ffffff", "#d8d8de", "#1d1d1f", "#6e6e73", "#cfcfd6", "#ffffff", "#2f9e44"),
+		Copper   = Th("#181412", "#1d1916", "#221d1a", "#322b26", "#ece4dc", "#8c8279", "#3e3732", "#1c1510", "#c4956c"),
+		Apple    = Th("#101112", "#151617", "#1a1b1d", "#2a2c2f", "#f5f5f7", "#8e8e93", "#3a3a3c", "#0b1a0c", "#8bd17c"),
+		Mist     = Th("#f5f5f7", "#ebebee", "#ffffff", "#d8d8de", "#1d1d1f", "#6e6e73", "#cfcfd6", "#ffffff", "#2f9e44"),
 		Midnight = Th("#0e1118", "#12161f", "#171c27", "#242b3a", "#e6ecf7", "#7d8aa3", "#2f3748", "#0a1020", "#5b8cff"),
-		Ocean = Th("#0a1519", "#0e1c22", "#12252d", "#1d3a45", "#e3f6fb", "#78a3b0", "#264653", "#06161c", "#38c6e8"),
-		Sakura = Th("#1a1216", "#21171c", "#291d23", "#3b2a33", "#fbeaf1", "#a98796", "#4a3540", "#2a0f1a", "#ff8fb8"),
-		Dracula = Th("#1b1c26", "#20212e", "#272938", "#363950", "#f8f8f2", "#8a8fb5", "#41445e", "#1b1226", "#bd93f9"),
-		Forest = Th("#0e1510", "#121b14", "#17231a", "#233829", "#e8f5ea", "#7fa088", "#2d4535", "#08140c", "#6fcf84"),
-		Sunset = Th("#1a1210", "#21171a", "#291c1d", "#3c2a29", "#ffefe6", "#b58f85", "#4b3532", "#2a1008", "#ff8a5b"),
-		AMOLED = Th("#000000", "#070707", "#0e0e0e", "#1f1f1f", "#f2f2f2", "#808080", "#2a2a2a", "#000000", "#e8e8e8"),
-		Slate = Th("#16181c", "#1b1e23", "#21252b", "#2f343c", "#e7eaee", "#8a929d", "#3a4049", "#12151a", "#8fa3b8"),
-		Sand = Th("#f4efe6", "#e9e2d4", "#fffaf0", "#d9cfba", "#2b2418", "#7d725c", "#cfc4ac", "#ffffff", "#c2793a"),
+		Ocean    = Th("#0a1519", "#0e1c22", "#12252d", "#1d3a45", "#e3f6fb", "#78a3b0", "#264653", "#06161c", "#38c6e8"),
+		Sakura   = Th("#1a1216", "#21171c", "#291d23", "#3b2a33", "#fbeaf1", "#a98796", "#4a3540", "#2a0f1a", "#ff8fb8"),
+		Dracula  = Th("#1b1c26", "#20212e", "#272938", "#363950", "#f8f8f2", "#8a8fb5", "#41445e", "#1b1226", "#bd93f9"),
+		Forest   = Th("#0e1510", "#121b14", "#17231a", "#233829", "#e8f5ea", "#7fa088", "#2d4535", "#08140c", "#6fcf84"),
+		Sunset   = Th("#1a1210", "#21171a", "#291c1d", "#3c2a29", "#ffefe6", "#b58f85", "#4b3532", "#2a1008", "#ff8a5b"),
+		AMOLED   = Th("#000000", "#070707", "#0e0e0e", "#1f1f1f", "#f2f2f2", "#808080", "#2a2a2a", "#000000", "#e8e8e8"),
+		Slate    = Th("#16181c", "#1b1e23", "#21252b", "#2f343c", "#e7eaee", "#8a929d", "#3a4049", "#12151a", "#8fa3b8"),
+		Sand     = Th("#f4efe6", "#e9e2d4", "#fffaf0", "#d9cfba", "#2b2418", "#7d725c", "#cfc4ac", "#ffffff", "#c2793a"),
 	}
+
 	AHX.THEME_ORDER = {"Copper", "Apple", "Mist", "Midnight", "Ocean", "Sakura", "Dracula", "Forest", "Sunset", "AMOLED", "Slate", "Sand"}
+
 	ACCENTS.Apple = C("#8bd17c")
-	ACC_ORDER[#ACC_ORDER + 1] = "Apple"
+	if not table.find(ACC_ORDER, "Apple") then
+		ACC_ORDER[#ACC_ORDER + 1] = "Apple"
+	end
+
 	local function repaintAll()
 		rebind()
 		for _, f in ipairs(repaints) do pcall(f) end
 		syncAll()
 	end
 	AHX.repaintAll = repaintAll
+
 	AHX.applyTheme = function(name)
 		local th = AHX.THEMES[name]
 		if not th then return end
 		S.Theme = name
-		for k, v in pairs(th) do if k ~= "acc" then T[k] = C(v) end end
+		for k, v in pairs(th) do
+			if k \~= "acc" then
+				T[k] = C(v)
+			end
+		end
 		T.acc = S.UseCustomAcc and Color3.fromRGB(S.AccR, S.AccG, S.AccB) or C(th.acc)
 		repaintAll()
-		if AHX.themeStrokes then AHX.themeStrokes() end
 	end
-	AHX.setAccColor = function(col) T.acc = col; repaintAll() end
-	-- mais fontes
-	local boldMap = {Gotham = "GothamBold", SourceSans = "SourceSansBold", SourceSansLight = "SourceSansBold", Arial = "ArialBold"}
+
+	AHX.setAccColor = function(col)
+		T.acc = col
+		repaintAll()
+	end
+
+	-- Mais fontes
+	local boldMap = {
+		Gotham = "GothamBold",
+		SourceSans = "SourceSansBold",
+		SourceSansLight = "SourceSansBold",
+		Arial = "ArialBold"
+	}
+
 	AHX.FONTS = {"Pixel", "Clean", "Mono"}
-	for _, n in ipairs({"Gotham", "SourceSans", "SourceSansLight", "Roboto", "RobotoCondensed", "RobotoMono", "Ubuntu", "Nunito", "Oswald", "Jura", "Michroma",
-		"FredokaOne", "JosefinSans", "TitilliumWeb", "Sarpanch", "SciFi", "Highway", "Cartoon", "Bangers", "LuckiestGuy", "Merriweather", "Garamond", "Bodoni",
-		"Fondamento", "Antique", "Fantasy", "Creepster", "IndieFlower", "PatrickHand", "Kalam", "AmaticSC", "SpecialElite", "DenkOne", "PermanentMarker", "Arial"}) do
+	for _, n in ipairs({
+		"Gotham", "SourceSans", "SourceSansLight", "Roboto", "RobotoCondensed", "RobotoMono",
+		"Ubuntu", "Nunito", "Oswald", "Jura", "Michroma", "FredokaOne", "JosefinSans",
+		"TitilliumWeb", "Sarpanch", "SciFi", "Highway", "Cartoon", "Bangers", "LuckiestGuy",
+		"Merriweather", "Garamond", "Bodoni", "Fondamento", "Antique", "Fantasy", "Creepster",
+		"IndieFlower", "PatrickHand", "Kalam", "AmaticSC", "SpecialElite", "DenkOne",
+		"PermanentMarker", "Arial"
+	}) do
 		local ok, f = pcall(function() return Enum.Font[n] end)
 		if ok and f then
 			local fb = f
-			if boldMap[n] then pcall(function() fb = Enum.Font[boldMap[n]] end) end
+			if boldMap[n] then
+				pcall(function() fb = Enum.Font[boldMap[n]] end)
+			end
 			FONTS[n] = {f, fb}
 			AHX.FONTS[#AHX.FONTS + 1] = n
 		end
@@ -1742,39 +1818,229 @@ local AHX = {hidden = {auto = true, fruits = true, esp = true, char = true}}
 end)()
 
 ------------------------------------------------------------------
--- 2) IDIOMAS (traduz o painel inteiro, ao vivo)
+-- 2) SISTEMA DE IDIOMAS (18 línguas)
 ------------------------------------------------------------------
 ;(function()
 	if AHX.fail then return end
+
 	local LC = {"pt", "en", "es", "fr", "de", "it", "ru", "tr", "id", "zh", "ja", "ko", "ar", "vi", "pl", "nl", "uk", "hi"}
-	local LN = {"Português", "English", "Español", "Français", "Deutsch", "Italiano", "Русский", "Türkçe", "Bahasa Indonesia", "中文", "日本語", "한국어", "العربية", "Tiếng Việt", "Polski", "Nederlands", "Українська", "हिन्दी"}
+	local LN = {
+		"Português", "English", "Español", "Français", "Deutsch", "Italiano",
+		"Русский", "Türkçe", "Bahasa Indonesia", "中文", "日本語", "한국어",
+		"العربية", "Tiếng Việt", "Polski", "Nederlands", "Українська", "हिन्दी"
+	}
+
+	AHX.LC, AHX.LN = LC, LN
+
 	local LI = {}
 	for i, c in ipairs(LC) do LI[c] = i end
-	AHX.LC, AHX.LN = LC, LN
-	local REV, PFX = {}, {}
-	local function D(packed, prefix)
+
+	local REV = {}
+	local function D(packed)
 		local arr = {}
-		for part in string.gmatch(packed, "[^|]+") do arr[#arr + 1] = part end
+		for part in string.gmatch(packed, "[^|]+") do
+			arr[#arr + 1] = part
+		end
 		for _, s in ipairs(arr) do
 			local k = s:lower()
-			if REV[k] == nil then REV[k] = arr end
+			if not REV[k] then
+				REV[k] = arr
+			end
 		end
-		if prefix then PFX[#PFX + 1] = arr end
 	end
-	-- ordem: pt|en|es|fr|de|it|ru|tr|id|zh|ja|ko|ar|vi|pl|nl|uk|hi
-	D("Bem-vindo de volta, |Welcome back, |Bienvenido de nuevo, |Bon retour, |Willkommen zurück, |Bentornato, |С возвращением, |Tekrar hoş geldin, |Selamat datang kembali, |欢迎回来，|おかえりなさい、|다시 오신 것을 환영합니다, |مرحبًا بعودتك، |Chào mừng trở lại, |Witaj ponownie, |Welkom terug, |З поверненням, |वापसी पर स्वागत है, ", true)
+
+	-- Traduções principais
+	D("Bem-vindo de volta, |Welcome back, |Bienvenido de nuevo, |Bon retour, |Willkommen zurück, |Bentornato, |С возвращением, |Tekrar hoş geldin, |Selamat datang kembali, |欢迎回来，|おかえりなさい、|다시 오신 것을 환영합니다, |مرحبًا بعودتك، |Chào mừng trở lại, |Witaj ponownie, |Welkom terug, |З поверненням, |वापसी पर स्वागत है, ")
 	D("Sobre|About|Acerca de|À propos|Info|Info|О программе|Hakkında|Tentang|关于|情報|정보|حول|Giới thiệu|O hubie|Over|Про хаб|परिचय")
 	D("Painel|Home|Inicio|Accueil|Start|Home|Главная|Ana Sayfa|Beranda|主页|ホーム|홈|الرئيسية|Trang chủ|Start|Home|Головна|होम")
+	D("Automação|Automation|Automatización|Automatisation|Automatisierung|Automazione|Автоматизация|Otomasyon|Otomatisasi|自动化|自動化|자동화|الأتمتة|Tự động hóa|Automatyzacja|Automatisering|Автоматизація|स्वचालन")
 	D("Frutas|Fruits|Frutas|Fruits|Früchte|Frutti|Фрукты|Meyveler|Buah|水果|フルーツ|과일|الفواكه|Trái cây|Owoce|Fruit|Фрукти|फल")
 	D("Teleporte|Teleport|Teletransporte|Téléportation|Teleport|Teletrasporto|Телепорт|Işınlanma|Teleportasi|传送|テレポート|텔레포트|الانتقال|Dịch chuyển|Teleport|Teleport|Телепорт|टेलीपोर्ट")
 	D("Inventário|Inventory|Inventario|Inventaire|Inventar|Inventario|Инвентарь|Envanter|Inventaris|背包|インベントリ|인벤토리|المخزون|Kho đồ|Ekwipunek|Inventaris|Інвентар|इन्वेंटरी")
 	D("Configurações|Settings|Ajustes|Réglages|Einstellungen|Impostazioni|Настройки|Ayarlar|Pengaturan|设置|設定|설정|الإعدادات|Cài đặt|Ustawienia|Instellingen|Налаштування|सेटिंग्स")
-	D("Combate|Combat|Combate|Combat|Kampf|Combattimento|Бой|Savaş|Pertempuran|战斗|戦闘|전투|القتال|Chiến đấu|Walka|Gevecht|Бій|युद्ध")
-	D("Rápido|Quick|Rápido|Rapide|Schnell|Rapido|Быстрый|Hızlı|Cepat|快捷|クイック|빠른 실행|سريع|Nhanh|Szybkie|Snel|Швидкий|त्वरित")
-	D("Ativos|Active|Activos|Actifs|Aktiv|Attivi|Активные|Aktif|Aktif|已启用|有効|활성|النشطة|Đang bật|Aktywne|Actief|Активні|सक्रिय")
-	D("Perfil|Profile|Perfil|Profil|Profil|Profilo|Профиль|Profil|Profil|个人资料|プロフィール|프로필|الملف الشخصي|Hồ sơ|Profil|Profiel|Профіль|प्रोफ़ाइल")
-	D("Aparência|Appearance|Apariencia|Apparence|Aussehen|Aspetto|Внешний вид|Görünüm|Tampilan|外观|外観|모양|المظهر|Giao diện|Wygląd|Uiterlijk|Вигляд|रूप")
-	D("Jogador|Player|Jugador|Joueur|Spieler|Giocatore|Игрок|Oyuncu|Pemain|玩家|プレイヤー|플레이어|اللاعب|Người chơi|Gracz|Speler|Гравець|खिलाड़ी")
 	D("Personagem|Character|Personaje|Personnage|Charakter|Personaggio|Персонаж|Karakter|Karakter|角色|キャラクター|캐릭터|الشخصية|Nhân vật|Postać|Personage|Персонаж|किरदार")
 	D("Tudo o que você precisa, ao seu alcance.|Everything you need, within reach.|Todo lo que necesitas, a tu alcance.|Tout ce dont vous avez besoin, à portée de main.|Alles, was du brauchst, in Reichweite.|Tutto ciò che ti serve, a portata di mano.|Всё необходимое — под рукой.|İhtiyacın olan her şey, elinin altında.|Semua yang kamu butuhkan, dalam jangkauan.|你所需的一切，触手可及。|必要なものがすべて、すぐそばに。|필요한 모든 것이 손끝에.|كل ما تحتاجه في متناول يدك.|Mọi thứ bạn cần, trong tầm tay.|Wszystko, czego potrzebujesz, w zasięgu ręki.|Alles wat je nodig hebt, binnen handbereik.|Усе потрібне — під рукою.|आपकी ज़रूरत की हर चीज़, आपकी पहुँच में।")
-	D("Preferências de UI  ›|UI preferences  ›|Preferencias de UI  ›|Préférences d'UI  ›|UI-Einstellungen  ›|Preferenze UI  ›|Настройки UI  ›|Arayüz tercihleri  ›|Preferensi UI  ›|界面偏好  ›|UI設定  ›|UI 설정  ›|تفضيلات الواجهة  ›
+	D("Preferências de UI  ›|UI preferences  ›|Preferencias de UI  ›|Préférences d'UI  ›|UI-Einstellungen  ›|Preferenze UI  ›|Настройки UI  ›|Arayüz tercihleri  ›|Preferensi UI  ›|界面偏好  ›|UI設定  ›|UI 설정  ›|تفضيلات الواجهة  ›|Tùy chọn giao diện  ›|Preferencje UI  ›|UI-voorkeuren  ›|Налаштування UI  ›|UI प्राथमिकताएँ  ›")
+	D("Personalizar|Customize|Personalizar|Personnaliser|Anpassen|Personalizza|Настроить|Özelleştir|Sesuaikan|自定义|カスタマイズ|사용자 지정|تخصيص|Tùy chỉnh|Dostosuj|Aanpassen|Налаштувати|कस्टमाइज़")
+	D("Tema|Theme|Tema|Thème|Design|Tema|Тема|Tema|Tema|主题|テーマ|테마|السمة|Chủ đề|Motyw|Thema|Тема|थीम")
+	D("Aparência|Appearance|Apariencia|Apparence|Aussehen|Aspetto|Внешний вид|Görünüm|Tampilan|外观|外観|모양|المظهر|Giao diện|Wygląd|Uiterlijk|Вигляд|रूप")
+	D("Modo Focus|Focus Mode|Modo Enfoque|Mode Focus|Fokusmodus|Modalità Focus|Режим фокуса|Odak Modu|Mode Fokus|专注模式|フォーカスモード|포커스 모드|وضع التركيز|Chế độ tập trung|Tryb Focus|Focusmodus|Режим фокусу|फोकस मोड")
+	D("Compacto|Compact|Compacto|Compact|Kompakt|Compatto|Компактный|Kompakt|Kompak|紧凑|コンパクト|컴팩트|مضغوط|Gọn|Kompaktowy|Compact|Компактний|कॉम्पैक्ट")
+	D("Salvar|Save|Guardar|Enregistrer|Speichern|Salva|Сохранить|Kaydet|Simpan|保存|保存|저장|حفظ|Lưu|Zapisz|Opslaan|Зберегти|सहेजें")
+	D("Carregado! Bom jogo ✦|Loaded! Have fun ✦|¡Cargado! Que te diviertas ✦|Chargé ! Amuse-toi ✦|Geladen! Viel Spaß ✦|Caricato! Divertiti ✦|Загружено! Удачи ✦|Yüklendi! İyi oyunlar ✦|Dimuat! Selamat bermain ✦|已加载！玩得开心 ✦|読み込み完了！楽しんで ✦|로드됨! 즐거운 시간 되세요 ✦|تم التحميل! استمتع ✦|Đã tải! Chúc vui vẻ ✦|Załadowano! Miłej zabawy ✦|Geladen! Veel plezier ✦|Завантажено! Гарної гри ✦|लोड हो गया! मज़े करो ✦")
+
+	AHX.translate = function(text)
+		if not text or text == "" then return text end
+		local key = text:lower()
+		local arr = REV[key]
+		if not arr then return text end
+		local idx = LI[lang] or 2
+		return arr[idx] or arr[2] or text
+	end
+
+	AHX.applyLanguage = function(code)
+		if not LI[code] then return end
+		lang = code
+		S.Lang = code
+		-- Aqui você pode forçar atualização de textos se quiser
+		toast("Language", LN[LI[code]] or code, 2)
+	end
+end)()
+
+------------------------------------------------------------------
+-- 3) APLICAR TEMA + AUTO TEMA
+------------------------------------------------------------------
+;(function()
+	if AHX.fail then return end
+
+	local function checkAutoTheme()
+		if not S.ThemeAuto then return end
+		local hour = tonumber(os.date("%H"))
+		local isDay = hour >= 6 and hour < 18
+		local target = isDay and S.DayTheme or S.NightTheme
+		if S.Theme \~= target then
+			AHX.applyTheme(target)
+		end
+	end
+
+	-- Aplica o tema salvo
+	if AHX.THEMES[S.Theme] then
+		AHX.applyTheme(S.Theme)
+	else
+		AHX.applyTheme("Copper")
+	end
+
+	-- Loop de tema automático
+	task.spawn(function()
+		while alive do
+			checkAutoTheme()
+			task.wait(60)
+		end
+	end)
+end)()
+
+------------------------------------------------------------------
+-- 4) NOVAS OPÇÕES NA ABA CONFIGURAÇÕES
+------------------------------------------------------------------
+;(function()
+	if AHX.fail then return end
+
+	-- Adiciona seção de Aparência Avançada na aba cfg
+	local sc = pages.cfg and pages.cfg.sc
+	if not sc then return end
+
+	section(sc, L("Aparência Avançada", "Advanced Appearance"))
+	local g = group(sc, "cfg")
+
+	dropdown(g, L("Tema", "Theme"), AHX.THEME_ORDER, "Theme", function(v)
+		AHX.applyTheme(v)
+	end)
+
+	toggle(g, L("Tema automático (Dia/Noite)", "Auto theme (Day/Night)"), "ThemeAuto")
+	dropdown(g, L("Tema de dia", "Day theme"), AHX.THEME_ORDER, "DayTheme")
+	dropdown(g, L("Tema de noite", "Night theme"), AHX.THEME_ORDER, "NightTheme")
+
+	toggle(g, L("Usar cor personalizada", "Use custom accent"), "UseCustomAcc", function(v)
+		if v then
+			AHX.setAccColor(Color3.fromRGB(S.AccR, S.AccG, S.AccB))
+		else
+			AHX.applyTheme(S.Theme)
+		end
+	end)
+
+	slider(g, "Accent R", 0, 255, "AccR", function()
+		if S.UseCustomAcc then
+			AHX.setAccColor(Color3.fromRGB(S.AccR, S.AccG, S.AccB))
+		end
+	end)
+	slider(g, "Accent G", 0, 255, "AccG", function()
+		if S.UseCustomAcc then
+			AHX.setAccColor(Color3.fromRGB(S.AccR, S.AccG, S.AccB))
+		end
+	end)
+	slider(g, "Accent B", 0, 255, "AccB", function()
+		if S.UseCustomAcc then
+			AHX.setAccColor(Color3.fromRGB(S.AccR, S.AccG, S.AccB))
+		end
+	end)
+
+	section(sc, L("Layout & Experiência", "Layout & Experience"))
+	local g2 = group(sc, "cfg")
+
+	toggle(g2, L("Modo Compacto", "Compact Mode"), "Compact")
+	toggle(g2, L("Modo Focus", "Focus Mode"), "Focus", function(v)
+		-- Implementação básica do Focus Mode
+		if v then
+			side.Visible = false
+			content.Size = UDim2.new(1, 0, 1, -38)
+			content.Position = UDim2.fromOffset(0, 38)
+		else
+			side.Visible = true
+			content.Size = UDim2.new(1, -132, 1, -38)
+			content.Position = UDim2.fromOffset(132, 38)
+		end
+	end)
+
+	dropdown(g2, L("Densidade", "Density"), {"Compact", "Normal", "Spacious"}, "Density")
+	toggle(g2, L("Botões maiores (Mobile)", "Bigger buttons (Mobile)"), "TouchBig")
+	toggle(g2, L("Swipe entre abas", "Swipe between tabs"), "SwipeTabs")
+	toggle(g2, L("Long Press", "Long Press"), "LongPress")
+	toggle(g2, L("Feedback háptico", "Haptic feedback"), "Haptic")
+
+	section(sc, L("Efeitos Visuais", "Visual Effects"))
+	local g3 = group(sc, "cfg")
+
+	toggle(g3, L("Cards com profundidade", "3D Cards"), "Cards3D")
+	toggle(g3, L("Animação staggered", "Stagger animation"), "Stagger")
+	toggle(g3, L("Skeleton loading", "Skeleton loading"), "Skeleton")
+	dropdown(g3, L("Tipo de partícula", "Particle type"), {"Runes", "None"}, "PartType", function(v)
+		S.Runes = (v == "Runes")
+	end)
+
+	section(sc, L("Idioma", "Language"))
+	local g4 = group(sc, "cfg")
+	dropdown(g4, L("Idioma do painel", "Panel language"), AHX.LN, "Lang", function(v)
+		local code = AHX.LC[table.find(AHX.LN, v) or 2]
+		if code then
+			AHX.applyLanguage(code)
+		end
+	end)
+end)()
+
+------------------------------------------------------------------
+-- 5) MELHORIAS DE MOBILE + FOCUS
+------------------------------------------------------------------
+;(function()
+	if AHX.fail then return end
+
+	-- Ajusta tamanho dos toggles se TouchBig estiver ativo
+	if S.TouchBig then
+		-- Pode ser expandido depois
+	end
+
+	-- Swipe simples entre abas (mobile)
+	if S.SwipeTabs then
+		local startX = nil
+		UIS.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch then
+				startX = input.Position.X
+			end
+		end)
+		UIS.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch and startX then
+				local dx = input.Position.X - startX
+				if math.abs(dx) > 80 then
+					local idx = table.find(order, cur) or 1
+					if dx < 0 and idx < #order then
+						showPage(order[idx + 1])
+					elseif dx > 0 and idx > 1 then
+						showPage(order[idx - 1])
+					end
+				end
+				startX = nil
+			end
+		end)
+	end
+end)()
+
+print("[Apple Blox] Parte 2 carregada com sucesso ✦")
