@@ -1664,3 +1664,117 @@ do
 		toast("Apple Hub", L("Carregado! Bom jogo ✦", "Loaded! Have fun ✦"), 3)
 	end)
 end
+-- ===== APPLE BLOX · PARTE 2 (cole logo ABAIXO do script do painel, no MESMO script) =====
+local AHX = {hidden = {auto = true, fruits = true, esp = true, char = true}}
+
+------------------------------------------------------------------
+-- 1) ESTADO, TEMAS E FONTES
+------------------------------------------------------------------
+;(function()
+	if not (S and GM and showPage and addPage and toggle and group and main and applyGlass and setShown) then
+		warn("[Apple Blox] Cole esta parte DEPOIS do script do painel, no mesmo script.")
+		AHX.fail = true
+		return
+	end
+	AHX.NEW = {
+		Theme = "Copper", ThemeAuto = false, DayTheme = "Apple", NightTheme = "Midnight", UseCustomAcc = false, AccR = 196, AccG = 149, AccB = 108,
+		Compact = false, Focus = false, Density = "Normal", TouchBig = false, SwipeTabs = true, LongPress = true, Haptic = true, ToastInside = true,
+		GlassAlpha = 12, Blur = false, BlurSize = 10, Cards3D = true, Stagger = true, Skeleton = true, PartType = "Runes",
+		Ambient = false, AmbientId = "", AmbientVol = 20, UpdateUrl = "", TabOrder = {}, Fav = {}, SaveCheck = true,
+	}
+	for k, v in pairs(AHX.NEW) do if S[k] == nil then S[k] = v end end
+	pcall(function()
+		if isfile and isfile(FILE) then
+			local d = HS:JSONDecode(readfile(FILE))
+			for k, v in pairs(AHX.NEW) do if d[k] ~= nil and type(d[k]) == type(v) then S[k] = d[k] end end
+		end
+	end)
+	local function C(h) return Color3.fromHex(h) end
+	AHX.C = C
+	local function Th(bg, side, card, line, text, sub, off, dark, acc) return {bg = bg, side = side, card = card, line = line, text = text, sub = sub, off = off, dark = dark, acc = acc} end
+	AHX.THEMES = {
+		Copper = Th("#181412", "#1d1916", "#221d1a", "#322b26", "#ece4dc", "#8c8279", "#3e3732", "#1c1510", "#c4956c"),
+		Apple = Th("#101112", "#151617", "#1a1b1d", "#2a2c2f", "#f5f5f7", "#8e8e93", "#3a3a3c", "#0b1a0c", "#8bd17c"),
+		Mist = Th("#f5f5f7", "#ebebee", "#ffffff", "#d8d8de", "#1d1d1f", "#6e6e73", "#cfcfd6", "#ffffff", "#2f9e44"),
+		Midnight = Th("#0e1118", "#12161f", "#171c27", "#242b3a", "#e6ecf7", "#7d8aa3", "#2f3748", "#0a1020", "#5b8cff"),
+		Ocean = Th("#0a1519", "#0e1c22", "#12252d", "#1d3a45", "#e3f6fb", "#78a3b0", "#264653", "#06161c", "#38c6e8"),
+		Sakura = Th("#1a1216", "#21171c", "#291d23", "#3b2a33", "#fbeaf1", "#a98796", "#4a3540", "#2a0f1a", "#ff8fb8"),
+		Dracula = Th("#1b1c26", "#20212e", "#272938", "#363950", "#f8f8f2", "#8a8fb5", "#41445e", "#1b1226", "#bd93f9"),
+		Forest = Th("#0e1510", "#121b14", "#17231a", "#233829", "#e8f5ea", "#7fa088", "#2d4535", "#08140c", "#6fcf84"),
+		Sunset = Th("#1a1210", "#21171a", "#291c1d", "#3c2a29", "#ffefe6", "#b58f85", "#4b3532", "#2a1008", "#ff8a5b"),
+		AMOLED = Th("#000000", "#070707", "#0e0e0e", "#1f1f1f", "#f2f2f2", "#808080", "#2a2a2a", "#000000", "#e8e8e8"),
+		Slate = Th("#16181c", "#1b1e23", "#21252b", "#2f343c", "#e7eaee", "#8a929d", "#3a4049", "#12151a", "#8fa3b8"),
+		Sand = Th("#f4efe6", "#e9e2d4", "#fffaf0", "#d9cfba", "#2b2418", "#7d725c", "#cfc4ac", "#ffffff", "#c2793a"),
+	}
+	AHX.THEME_ORDER = {"Copper", "Apple", "Mist", "Midnight", "Ocean", "Sakura", "Dracula", "Forest", "Sunset", "AMOLED", "Slate", "Sand"}
+	ACCENTS.Apple = C("#8bd17c")
+	ACC_ORDER[#ACC_ORDER + 1] = "Apple"
+	local function repaintAll()
+		rebind()
+		for _, f in ipairs(repaints) do pcall(f) end
+		syncAll()
+	end
+	AHX.repaintAll = repaintAll
+	AHX.applyTheme = function(name)
+		local th = AHX.THEMES[name]
+		if not th then return end
+		S.Theme = name
+		for k, v in pairs(th) do if k ~= "acc" then T[k] = C(v) end end
+		T.acc = S.UseCustomAcc and Color3.fromRGB(S.AccR, S.AccG, S.AccB) or C(th.acc)
+		repaintAll()
+		if AHX.themeStrokes then AHX.themeStrokes() end
+	end
+	AHX.setAccColor = function(col) T.acc = col; repaintAll() end
+	-- mais fontes
+	local boldMap = {Gotham = "GothamBold", SourceSans = "SourceSansBold", SourceSansLight = "SourceSansBold", Arial = "ArialBold"}
+	AHX.FONTS = {"Pixel", "Clean", "Mono"}
+	for _, n in ipairs({"Gotham", "SourceSans", "SourceSansLight", "Roboto", "RobotoCondensed", "RobotoMono", "Ubuntu", "Nunito", "Oswald", "Jura", "Michroma",
+		"FredokaOne", "JosefinSans", "TitilliumWeb", "Sarpanch", "SciFi", "Highway", "Cartoon", "Bangers", "LuckiestGuy", "Merriweather", "Garamond", "Bodoni",
+		"Fondamento", "Antique", "Fantasy", "Creepster", "IndieFlower", "PatrickHand", "Kalam", "AmaticSC", "SpecialElite", "DenkOne", "PermanentMarker", "Arial"}) do
+		local ok, f = pcall(function() return Enum.Font[n] end)
+		if ok and f then
+			local fb = f
+			if boldMap[n] then pcall(function() fb = Enum.Font[boldMap[n]] end) end
+			FONTS[n] = {f, fb}
+			AHX.FONTS[#AHX.FONTS + 1] = n
+		end
+	end
+end)()
+
+------------------------------------------------------------------
+-- 2) IDIOMAS (traduz o painel inteiro, ao vivo)
+------------------------------------------------------------------
+;(function()
+	if AHX.fail then return end
+	local LC = {"pt", "en", "es", "fr", "de", "it", "ru", "tr", "id", "zh", "ja", "ko", "ar", "vi", "pl", "nl", "uk", "hi"}
+	local LN = {"Português", "English", "Español", "Français", "Deutsch", "Italiano", "Русский", "Türkçe", "Bahasa Indonesia", "中文", "日本語", "한국어", "العربية", "Tiếng Việt", "Polski", "Nederlands", "Українська", "हिन्दी"}
+	local LI = {}
+	for i, c in ipairs(LC) do LI[c] = i end
+	AHX.LC, AHX.LN = LC, LN
+	local REV, PFX = {}, {}
+	local function D(packed, prefix)
+		local arr = {}
+		for part in string.gmatch(packed, "[^|]+") do arr[#arr + 1] = part end
+		for _, s in ipairs(arr) do
+			local k = s:lower()
+			if REV[k] == nil then REV[k] = arr end
+		end
+		if prefix then PFX[#PFX + 1] = arr end
+	end
+	-- ordem: pt|en|es|fr|de|it|ru|tr|id|zh|ja|ko|ar|vi|pl|nl|uk|hi
+	D("Bem-vindo de volta, |Welcome back, |Bienvenido de nuevo, |Bon retour, |Willkommen zurück, |Bentornato, |С возвращением, |Tekrar hoş geldin, |Selamat datang kembali, |欢迎回来，|おかえりなさい、|다시 오신 것을 환영합니다, |مرحبًا بعودتك، |Chào mừng trở lại, |Witaj ponownie, |Welkom terug, |З поверненням, |वापसी पर स्वागत है, ", true)
+	D("Sobre|About|Acerca de|À propos|Info|Info|О программе|Hakkında|Tentang|关于|情報|정보|حول|Giới thiệu|O hubie|Over|Про хаб|परिचय")
+	D("Painel|Home|Inicio|Accueil|Start|Home|Главная|Ana Sayfa|Beranda|主页|ホーム|홈|الرئيسية|Trang chủ|Start|Home|Головна|होम")
+	D("Frutas|Fruits|Frutas|Fruits|Früchte|Frutti|Фрукты|Meyveler|Buah|水果|フルーツ|과일|الفواكه|Trái cây|Owoce|Fruit|Фрукти|फल")
+	D("Teleporte|Teleport|Teletransporte|Téléportation|Teleport|Teletrasporto|Телепорт|Işınlanma|Teleportasi|传送|テレポート|텔레포트|الانتقال|Dịch chuyển|Teleport|Teleport|Телепорт|टेलीपोर्ट")
+	D("Inventário|Inventory|Inventario|Inventaire|Inventar|Inventario|Инвентарь|Envanter|Inventaris|背包|インベントリ|인벤토리|المخزون|Kho đồ|Ekwipunek|Inventaris|Інвентар|इन्वेंटरी")
+	D("Configurações|Settings|Ajustes|Réglages|Einstellungen|Impostazioni|Настройки|Ayarlar|Pengaturan|设置|設定|설정|الإعدادات|Cài đặt|Ustawienia|Instellingen|Налаштування|सेटिंग्स")
+	D("Combate|Combat|Combate|Combat|Kampf|Combattimento|Бой|Savaş|Pertempuran|战斗|戦闘|전투|القتال|Chiến đấu|Walka|Gevecht|Бій|युद्ध")
+	D("Rápido|Quick|Rápido|Rapide|Schnell|Rapido|Быстрый|Hızlı|Cepat|快捷|クイック|빠른 실행|سريع|Nhanh|Szybkie|Snel|Швидкий|त्वरित")
+	D("Ativos|Active|Activos|Actifs|Aktiv|Attivi|Активные|Aktif|Aktif|已启用|有効|활성|النشطة|Đang bật|Aktywne|Actief|Активні|सक्रिय")
+	D("Perfil|Profile|Perfil|Profil|Profil|Profilo|Профиль|Profil|Profil|个人资料|プロフィール|프로필|الملف الشخصي|Hồ sơ|Profil|Profiel|Профіль|प्रोफ़ाइल")
+	D("Aparência|Appearance|Apariencia|Apparence|Aussehen|Aspetto|Внешний вид|Görünüm|Tampilan|外观|外観|모양|المظهر|Giao diện|Wygląd|Uiterlijk|Вигляд|रूप")
+	D("Jogador|Player|Jugador|Joueur|Spieler|Giocatore|Игрок|Oyuncu|Pemain|玩家|プレイヤー|플레이어|اللاعب|Người chơi|Gracz|Speler|Гравець|खिलाड़ी")
+	D("Personagem|Character|Personaje|Personnage|Charakter|Personaggio|Персонаж|Karakter|Karakter|角色|キャラクター|캐릭터|الشخصية|Nhân vật|Postać|Personage|Персонаж|किरदार")
+	D("Tudo o que você precisa, ao seu alcance.|Everything you need, within reach.|Todo lo que necesitas, a tu alcance.|Tout ce dont vous avez besoin, à portée de main.|Alles, was du brauchst, in Reichweite.|Tutto ciò che ti serve, a portata di mano.|Всё необходимое — под рукой.|İhtiyacın olan her şey, elinin altında.|Semua yang kamu butuhkan, dalam jangkauan.|你所需的一切，触手可及。|必要なものがすべて、すぐそばに。|필요한 모든 것이 손끝에.|كل ما تحتاجه في متناول يدك.|Mọi thứ bạn cần, trong tầm tay.|Wszystko, czego potrzebujesz, w zasięgu ręki.|Alles wat je nodig hebt, binnen handbereik.|Усе потрібне — під рукою.|आपकी ज़रूरत की हर चीज़, आपकी पहुँच में।")
+	D("Preferências de UI  ›|UI preferences  ›|Preferencias de UI  ›|Préférences d'UI  ›|UI-Einstellungen  ›|Preferenze UI  ›|Настройки UI  ›|Arayüz tercihleri  ›|Preferensi UI  ›|界面偏好  ›|UI設定  ›|UI 설정  ›|تفضيلات الواجهة  ›
