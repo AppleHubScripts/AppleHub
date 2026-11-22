@@ -7058,3 +7058,1162 @@ end)()
 	layoutTabs()
 	notify("Apple Hub v70", tr("Novo: Conquistas, Checklist, Rotas, Foto & Câmera, Laboratório e 2048!", "New: Achievements, Checklist, Routes, Photo & Camera, Lab and 2048!", "Nuevo: Logros, Checklist, Rutas, Foto y Cámara, Laboratorio y 2048"), 4)
 end)()
+-- ===== APPLE HUB v80 — PARTE 9 (cole depois das Partes 0–8) =====
+
+------------------------------------------------------------------
+-- BLOCO 1: estado, 30 temas novos, funções novas
+------------------------------------------------------------------
+;(function()
+	if not (G and G.A8 and G.L and G.W and addPage) then warn("[AppleHub v80] Cole esta parte DEPOIS das Partes 0 a 8.") return end
+	local N = {pages = {}}
+	G.N9 = N
+	N.tr = G.A8.tr
+	local NEW = {
+		FavThemes = {}, DailyTheme = false,
+		GenHue = 210, GenSat = 70, GenMode = "Escuro", GenHarm = "Análoga", MixB = "", MixPct = 50,
+		AnimBorder = false, BorderSpeed = 90, BorderThick9 = 3,
+		Shadow = false, ShadowSize = 16, ShadowAlpha = 70,
+		Aurora = false, AuroraCount = 4, AuroraSpeed = 40, AuroraInt = 60,
+		TitleShine = false, FingerTrail = false, TrailSize = 10, TrailColor9 = "Tema",
+		BubblePulse = true, Confetti = true, NotifV2 = true, Greeting = true,
+		ClockOn = false, Clock24 = true, ClockSecs = true, ClockScale = 100,
+		PomoOn = false, PomoWork = 25, PomoBreak = 5, PomoLong = 15,
+		VizOn = false, VizBars = 28, VizStyle = "Barras", VizFull = false, VizHeight = 70,
+		PadOn = false, PadSize = 46, PadKeys = "Z,X,C,V,F", PadAlpha = 25,
+		RadialOn = false, RadialSize = 46, RadialPick = "Voar",
+		RadialItems = {"Auto Level", "Auto Farm", "Voar", "Noclip", "ESP Jogadores", "Radar", "Modo Seguro", "Tela Preta"},
+	}
+	for k, v in pairs(NEW) do
+		State[k] = v
+		Default[k] = type(v) == "table" and {} or v
+		table.insert(SAVE_KEYS, k)
+	end
+	pcall(function()
+		if isfile and isfile(CFG_FILE) then
+			local d = HttpService:JSONDecode(readfile(CFG_FILE))
+			for k, v in pairs(NEW) do
+				if d[k] ~= nil and type(d[k]) == type(v) then State[k] = d[k] end
+			end
+		end
+	end)
+	local tt = tostring(State.Title)
+	if State.Title == Default.Title or tt:find("v70", 1, true) or tt:find("v50", 1, true) or tt:find("v40", 1, true) or tt:find("v30", 1, true) or tt:find("v26", 1, true) or tt:find("v16", 1, true) then
+		State.Title = "Apple Hub v80  •  Blox Fruits"
+		titleLabel.Text = State.Title
+	end
+
+	-- 30 temas novos
+	local list = {
+		{"Boreal", "#050d14", "#0a1a24", "#12303d", "#e8fbff", "#7fb4c4", "#5cffc8", "#7b6cff"},
+		{"Nebula", "#0b0618", "#140c2b", "#21153f", "#f3e9ff", "#a58bd0", "#ff6bd6", "#6b8bff"},
+		{"Obsidiana", "#08080a", "#111114", "#1c1c22", "#f4f1ea", "#8d897f", "#e8c36a", "#b8860b"},
+		{"Sapphire", "#060b1f", "#0b1433", "#13224d", "#e8efff", "#7e93c8", "#4d7cff", "#2c4fd6"},
+		{"Amethyst", "#12081c", "#1d0f2e", "#2c1745", "#f6ecff", "#a98bc9", "#b05cff", "#7a3cff"},
+		{"Jade", "#04120d", "#08201a", "#0e3328", "#e6fff3", "#6fb59a", "#00c98d", "#00a3a3"},
+		{"CrimsonNight", "#12040a", "#200a14", "#34101f", "#ffecf1", "#c08a98", "#ff3860", "#ff7a45"},
+		{"Copper", "#140c07", "#21140b", "#351f10", "#fff1e6", "#bf9a80", "#e0803a", "#c2552b"},
+		{"Tangerine", "#150a05", "#23110a", "#3a1b10", "#fff2e8", "#c29478", "#ff8c1a", "#ff4d6d"},
+		{"Vaporwave", "#1a0b2e", "#2a1245", "#3c1a63", "#fff0fb", "#c9a3e8", "#ff71ce", "#01cdfe"},
+		{"Miami", "#07131a", "#0d2230", "#143549", "#f0fbff", "#78a8bd", "#ff5e8a", "#00e5ff"},
+		{"Sunrise", "#1c0e14", "#2d1621", "#44202f", "#fff3ec", "#c9979a", "#ffb347", "#ff5f6d"},
+		{"Ember", "#140805", "#220e08", "#35160c", "#fff0e8", "#c4907a", "#ff6a00", "#ffd200"},
+		{"Polar", "#0b1218", "#131d26", "#1d2c3a", "#f2f8fc", "#8aa0b3", "#9ad1ff", "#c5b3ff"},
+		{"RoseNoir", "#0f0709", "#1b0d12", "#2b141c", "#ffeef2", "#b98a96", "#ff4d88", "#c9184a"},
+		{"Moss", "#0b1209", "#131d10", "#1e2d19", "#eefae8", "#84a276", "#8bd450", "#4caf50"},
+		{"Cobalt", "#040a1a", "#08122e", "#0e1d49", "#e6f0ff", "#6e8cc6", "#0066ff", "#00c2ff"},
+		{"Coffee", "#100b08", "#1b130e", "#2b1f17", "#f7ede4", "#a8917e", "#c8905a", "#8d5a34"},
+		{"Spectrum", "#0c0c10", "#14141a", "#20202a", "#ffffff", "#9a9aae", "#ff3b6b", "#3b8bff"},
+		{"PastelNight", "#1a1626", "#251f36", "#342c4a", "#fdf4ff", "#b9a8d6", "#ffb3d9", "#a8c5ff"},
+		{"HackerBlue", "#020a14", "#06162a", "#0a2646", "#d8eeff", "#5f8fbf", "#00aaff", "#00ffd5"},
+		{"Hanabi", "#08060f", "#130d22", "#20153a", "#fff5e8", "#b8a4d8", "#ffc857", "#ff5d8f"},
+		{"Titanium", "#101113", "#181a1d", "#25282c", "#eef0f2", "#8d939a", "#c0c7d1", "#6b7785"},
+		{"Rainforest", "#031109", "#08200f", "#0f3519", "#e6ffee", "#63b07a", "#00e676", "#ffea00"},
+		{"Dusk", "#130d1f", "#1f1531", "#2f2148", "#f3eaff", "#a894d1", "#ff8a65", "#7e57c2"},
+		{"Glacier", "#effcfa", "#d8f3ef", "#ffffff", "#0f2a28", "#5c8581", "#00b3a4", "#3b82f6"},
+		{"Lilas", "#f6f0ff", "#e9defb", "#ffffff", "#24123d", "#7d6a9e", "#8b5cf6", "#ec4899"},
+		{"Peach", "#fff4ec", "#ffe5d4", "#ffffff", "#3a1d0e", "#a07258", "#ff7a45", "#ff4d8d"},
+		{"Cloud", "#f3f6fb", "#e3e9f4", "#ffffff", "#14213d", "#66779a", "#2563eb", "#06b6d4"},
+		{"Matcha", "#f2f8ee", "#e0eed8", "#ffffff", "#1a2e12", "#6a8a5a", "#5aa02c", "#a3c936"},
+	}
+	N.themeNames = {}
+	for _, e in ipairs(list) do
+		Themes[e[1]] = th(e[2], e[3], e[4], e[5], e[6], e[7], e[8])
+		table.insert(ThemeNames, #ThemeNames, e[1])
+		table.insert(N.themeNames, e[1])
+	end
+
+	-- novas funções (dock, paleta, atalhos, console, menu radial)
+	local extra = {{"Aurora", "Aurora"}, {"Borda Animada", "AnimBorder"}, {"Sombra", "Shadow"}, {"Brilho no Título", "TitleShine"},
+		{"Rastro do Dedo", "FingerTrail"}, {"Relógio", "ClockOn"}, {"Pomodoro", "PomoOn"}, {"Visualizador", "VizOn"},
+		{"Skill Pad", "PadOn"}, {"Menu Radial", "RadialOn"}}
+	for _, f in ipairs(extra) do
+		table.insert(G.Feats, f)
+		table.insert(G.FeatNames, f[1])
+		G.FeatMap[f[1]] = f[2]
+	end
+end)()
+
+------------------------------------------------------------------
+-- BLOCO 2: efeitos visuais (borda, sombra, aurora, título, rastro, confete)
+------------------------------------------------------------------
+;(function()
+	if not (G and G.N9) then return end
+	local N = G.N9
+	local white = Color3.new(1, 1, 1)
+
+	-- borda animada
+	local ov = new("Frame", {Name = "AnimBorder", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 19, Visible = false, Parent = main}, {rc(22)})
+	local ovs = new("UIStroke", {Thickness = State.BorderThick9, Color = white, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = ov})
+	local ovg = new("UIGradient", {Parent = ovs})
+	bind(ovg, "Color", function()
+		return ColorSequence.new({ColorSequenceKeypoint.new(0, T.accent), ColorSequenceKeypoint.new(0.5, T.accent2), ColorSequenceKeypoint.new(1, T.accent)})
+	end, true)
+
+	-- sombra (4 camadas atrás do painel)
+	local sh, shs = {}, {}
+	for i = 1, 4 do
+		local sc = new("UIScale", {})
+		sh[i] = new("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, ZIndex = 0, Visible = false, Parent = gui},
+			{new("UICorner", {CornerRadius = UDim.new(0, 22 + i * 7)}), sc})
+		shs[i] = sc
+	end
+
+	-- aurora (manchas suaves flutuando atrás do conteúdo)
+	local aur = new("Frame", {Name = "Aurora", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 0, Visible = false, Parent = main})
+	local blobs = {}
+	N.recolorAurora = function()
+		local a = 1 - (State.AuroraInt / 100) * 0.10
+		for _, b in ipairs(blobs) do
+			local c = (b.i % 2 == 0) and T.accent or T.accent2
+			for _, f in ipairs(b.rings) do f.BackgroundColor3 = c; f.BackgroundTransparency = a end
+		end
+	end
+	table.insert(binders, function() N.recolorAurora() end)
+	N.buildAurora = function()
+		for _, b in ipairs(blobs) do pcall(function() b.f:Destroy() end) end
+		table.clear(blobs)
+		aur.Visible = State.Aurora
+		if not State.Aurora then return end
+		for i = 1, State.AuroraCount do
+			local size = 180 + math.random() * 160
+			local holder = new("Frame", {Size = UDim2.fromOffset(size, size), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundTransparency = 1, Parent = aur})
+			local rings = {}
+			for r = 1, 4 do
+				local k = 1 - (r - 1) * 0.2
+				rings[r] = new("Frame", {Size = UDim2.fromScale(k, k), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BorderSizePixel = 0, Parent = holder}, {corner(500)})
+			end
+			blobs[i] = {f = holder, rings = rings, i = i, ph = math.random() * 6.28, sx = 0.5 + math.random() * 0.8, sy = 0.5 + math.random() * 0.8}
+		end
+		N.recolorAurora()
+	end
+
+	N.applyFx = function()
+		ov.Visible = State.AnimBorder
+		ovs.Thickness = State.BorderThick9
+	end
+
+	conn(RS.RenderStepped:Connect(function(dt)
+		dt = math.min(dt, 0.05)
+		local t = tick()
+		if State.AnimBorder then ovg.Rotation = (ovg.Rotation + dt * State.BorderSpeed) % 360 end
+		local vis = State.Shadow and main.Visible
+		local gt = main.GroupTransparency
+		for i, f in ipairs(sh) do
+			f.Visible = vis
+			if vis then
+				local grow = State.ShadowSize * i * 0.6
+				f.Position = main.Position
+				f.Size = UDim2.fromOffset(main.Size.X.Offset + grow, main.Size.Y.Offset + grow)
+				shs[i].Scale = uiscale.Scale
+				f.BackgroundTransparency = 1 - (State.ShadowAlpha / 100) * 0.07 * (1 - gt)
+			end
+		end
+		if State.Aurora and aur.Visible then
+			local sp = State.AuroraSpeed / 100
+			for _, b in ipairs(blobs) do
+				b.f.Position = UDim2.fromScale(0.5 + 0.5 * math.sin(t * 0.4 * sp * b.sx + b.ph), 0.5 + 0.5 * math.cos(t * 0.33 * sp * b.sy + b.ph * 1.3))
+			end
+		end
+	end))
+
+	-- brilho no título
+	local tg = new("UIGradient", {Enabled = false, Parent = titleLabel})
+	bind(tg, "Color", function()
+		return ColorSequence.new({ColorSequenceKeypoint.new(0, T.accent), ColorSequenceKeypoint.new(0.5, white), ColorSequenceKeypoint.new(1, T.accent2)})
+	end, true)
+	G.loop(0.05, function()
+		if State.TitleShine then
+			tg.Enabled = true
+			titleLabel.TextColor3 = white
+			tg.Offset = Vector2.new(math.sin(tick() * 1.5) * 0.6, 0)
+		elseif tg.Enabled then
+			tg.Enabled = false
+			titleLabel.TextColor3 = T.sub
+		end
+	end)
+
+	-- rastro luminoso do dedo / mouse
+	local tlayer = new("Frame", {Name = "FingerTrail", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 499, Parent = gui})
+	local lastT = 0
+	local function dotAt(x, y)
+		local s, m = State.TrailSize, State.TrailColor9
+		local c
+		if m == "Arco-íris" then c = Color3.fromHSV((tick() * 0.6) % 1, 0.7, 1)
+		elseif m == "Branco" then c = white
+		else c = (math.floor(tick() * 4) % 2 == 0) and T.accent or T.accent2 end
+		local f = new("Frame", {Size = UDim2.fromOffset(s, s), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(x, y), BackgroundColor3 = c, BorderSizePixel = 0, Parent = tlayer}, {corner(s)})
+		tween(f, 0.45, {Size = UDim2.fromOffset(2, 2), BackgroundTransparency = 1}, Enum.EasingStyle.Quad)
+		task.delay(0.5, function() pcall(function() f:Destroy() end) end)
+	end
+	conn(UIS.InputChanged:Connect(function(i)
+		if not State.FingerTrail then return end
+		local isTouch = i.UserInputType == Enum.UserInputType.Touch
+		local isMouse = i.UserInputType == Enum.UserInputType.MouseMovement and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+		if not (isTouch or isMouse) then return end
+		if tick() - lastT < 0.02 or #tlayer:GetChildren() > 80 then return end
+		lastT = tick()
+		local inset = GuiService:GetGuiInset()
+		dotAt(i.Position.X + inset.X, i.Position.Y + inset.Y)
+	end))
+
+	-- bolha pulsando
+	local bsc = new("UIScale", {Parent = bubble})
+	G.loop(0.05, function()
+		bsc.Scale = (State.BubblePulse and bubble.Visible) and (1 + 0.07 * math.sin(tick() * 3)) or 1
+	end)
+
+	-- confete (usado nas conquistas)
+	N.confetti = function()
+		if not State.Confetti then return end
+		local lay = new("Frame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 520, Parent = gui})
+		for _ = 1, 70 do
+			local w = 5 + math.random() * 5
+			local x = math.random()
+			local f = new("Frame", {Size = UDim2.fromOffset(w, w * 0.55), Position = UDim2.new(x, 0, -0.05, 0), BackgroundColor3 = Color3.fromHSV(math.random(), 0.7, 1), BorderSizePixel = 0, Rotation = math.random(360), Parent = lay})
+			local dur = 1.4 + math.random() * 1.2
+			tween(f, dur, {Position = UDim2.new(x + (math.random() - 0.5) * 0.3, 0, 1.08, 0), Rotation = math.random(-400, 400)}, Enum.EasingStyle.Quad)
+		end
+		task.delay(3.2, function() pcall(function() lay:Destroy() end) end)
+	end
+	local oldUnlock = G.A8.unlock
+	G.A8.unlock = function(a)
+		oldUnlock(a)
+		pcall(N.confetti)
+	end
+
+	G.after.AnimBorder = function() N.applyFx() end
+	G.after.Aurora = function() N.buildAurora() end
+end)()
+
+------------------------------------------------------------------
+-- BLOCO 3: notificações v2
+------------------------------------------------------------------
+;(function()
+	if not (G and G.N9) then return end
+	local live = {}
+	local prevNotify = notify
+	local function kindFor(title)
+		local t = tostring(title):lower()
+		local function has(s) return t:find(s, 1, true) ~= nil end
+		if has("erro") or has("error") or has("⚠") or has("falh") then return "⚠", Color3.fromRGB(255, 120, 70) end
+		if has("conquista") or has("achiev") or has("★") or has("meta") or has("goal") or has("logro") then return "★", Color3.fromRGB(255, 196, 60) end
+		if has("fruta") or has("fruit") then return "🍎", Color3.fromRGB(255, 170, 60) end
+		if has("boss") then return "👑", Color3.fromRGB(190, 90, 255) end
+		if has("chat") or has("💬") then return "💬", Color3.fromRGB(90, 200, 255) end
+		if has("timer") or has("lembrete") or has("⏰") or has("pomodoro") then return "⏰", Color3.fromRGB(255, 150, 90) end
+		if has("compra") or has("loja") or has("🛒") then return "🛒", Color3.fromRGB(120, 220, 150) end
+		return "✦", T.accent
+	end
+	notify = function(title, msg, dur)
+		if not State.NotifV2 then return prevNotify(title, msg, dur) end
+		title, msg = tostring(title), tostring(msg)
+		local V = G.V
+		if V and V.log then
+			table.insert(V.log, 1, os.date("%H:%M:%S") .. "  " .. title .. " — " .. msg)
+			if #V.log > 40 then table.remove(V.log) end
+		end
+		if not State.NotifyOn then return end
+		dur = dur or 3
+		local icon, col = kindFor(title)
+		local card = new("CanvasGroup", {Size = UDim2.new(1, 0, 0, 58), BackgroundColor3 = T.row, GroupTransparency = 1, Parent = notifHolder}, {rc(14)})
+		bind(card, "BackgroundColor3", "row")
+		new("UIStroke", {Color = col, Thickness = 1.2, Transparency = 0.55, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = card})
+		local sc = new("UIScale", {Scale = 0.85, Parent = card})
+		local badge = new("Frame", {Size = UDim2.fromOffset(34, 34), Position = UDim2.fromOffset(10, 9), BackgroundColor3 = col, BackgroundTransparency = 0.8, BorderSizePixel = 0, Parent = card}, {corner(17)})
+		new("TextLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = icon, TextSize = 17, Font = Enum.Font.GothamBold, TextColor3 = col, Parent = badge})
+		mkText({Size = UDim2.new(1, -62, 0, 20), Position = UDim2.fromOffset(52, 6), Text = title, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card}, true)
+		mkText({Size = UDim2.new(1, -62, 0, 18), Position = UDim2.fromOffset(52, 26), Text = msg, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card}, false, "sub")
+		local barBG = new("Frame", {Size = UDim2.new(1, -20, 0, 3), Position = UDim2.new(0, 10, 1, -7), BackgroundColor3 = col, BackgroundTransparency = 0.85, BorderSizePixel = 0, Parent = card}, {corner(2)})
+		local bar = new("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = col, BorderSizePixel = 0, Parent = barBG}, {corner(2)})
+		tween(card, 0.35, {GroupTransparency = 0})
+		tween(sc, 0.45, {Scale = 1}, Enum.EasingStyle.Back)
+		tween(bar, dur, {Size = UDim2.fromScale(0, 1)}, Enum.EasingStyle.Linear)
+		local closed = false
+		local function close()
+			if closed then return end
+			closed = true
+			tween(card, 0.3, {GroupTransparency = 1})
+			tween(sc, 0.3, {Scale = 0.9})
+			task.delay(0.35, function() pcall(function() card:Destroy() end) end)
+		end
+		local hit = new("TextButton", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 5, Parent = card})
+		hit.MouseButton1Click:Connect(close)
+		task.delay(dur, close)
+		table.insert(live, close)
+		if #live > 5 then
+			local first = table.remove(live, 1)
+			pcall(first)
+		end
+	end
+end)()
+
+------------------------------------------------------------------
+-- BLOCO 4: temas (lógica do gerador, misturador, tema do dia)
+------------------------------------------------------------------
+;(function()
+	if not (G and G.N9) then return end
+	local N = G.N9
+	local tr = N.tr
+	N.names = function()
+		local out = {}
+		for _, n in ipairs(ThemeNames) do if n ~= "Custom" then out[#out + 1] = n end end
+		return out
+	end
+	N.daily = function(silent)
+		local names = N.names()
+		local n = names[(math.floor(os.time() / 86400) % #names) + 1]
+		applyTheme(n)
+		if not silent then notify("Tema", tr("Tema do dia: ", "Theme of the day: ", "Tema del día: ") .. n, 2.5) end
+		return n
+	end
+	local function commit()
+		State.CustomHex = {}
+		for k, v in pairs(Themes.Custom) do
+			if typeof(v) == "Color3" then State.CustomHex[k] = "#" .. v:ToHex() end
+		end
+		applyTheme("Custom")
+	end
+	N.gen = function()
+		local h, s = State.GenHue / 360, State.GenSat / 100
+		local dark = State.GenMode == "Escuro"
+		local offs = {["Análoga"] = 30, ["Complementar"] = 180, ["Triádica"] = 120, ["Dividida"] = 150}
+		local h2 = (h + (offs[State.GenHarm] or 30) / 360) % 1
+		local c = Themes.Custom
+		if dark then
+			c.bg = Color3.fromHSV(h, math.min(1, s * 0.55), 0.07)
+			c.side = Color3.fromHSV(h, math.min(1, s * 0.5), 0.11)
+			c.row = Color3.fromHSV(h, math.min(1, s * 0.45), 0.17)
+			c.text = Color3.fromHSV(h, 0.04, 0.97)
+			c.sub = Color3.fromHSV(h, math.min(1, s * 0.3), 0.72)
+			c.accent = Color3.fromHSV(h, s, 1)
+			c.accent2 = Color3.fromHSV(h2, s, 1)
+		else
+			c.bg = Color3.fromHSV(h, s * 0.06, 0.98)
+			c.side = Color3.fromHSV(h, s * 0.12, 0.92)
+			c.row = Color3.new(1, 1, 1)
+			c.text = Color3.fromHSV(h, 0.55, 0.16)
+			c.sub = Color3.fromHSV(h, 0.25, 0.46)
+			c.accent = Color3.fromHSV(h, s, 0.88)
+			c.accent2 = Color3.fromHSV(h2, s, 0.88)
+		end
+		commit()
+	end
+	N.mix = function()
+		local q, B = State.MixB:lower():gsub("%s", ""), nil
+		for _, n in ipairs(ThemeNames) do
+			if n ~= "Custom" and n:lower() == q then B = Themes[n] end
+		end
+		if not B then notify("Tema", tr("Tema não encontrado.", "Theme not found.", "Tema no encontrado."), 2.5) return end
+		local p, out = State.MixPct / 100, {}
+		for _, k in ipairs({"bg", "side", "row", "text", "sub", "accent", "accent2"}) do out[k] = T[k]:Lerp(B[k], p) end
+		for k, v in pairs(out) do Themes.Custom[k] = v end
+		commit()
+	end
+end)()
+
+------------------------------------------------------------------
+-- BLOCO 5: widgets (relógio, pomodoro, visualizador, skill pad, menu radial)
+------------------------------------------------------------------
+;(function()
+	if not (G and G.N9) then return end
+	local N = G.N9
+	local tr = N.tr
+	local white = Color3.new(1, 1, 1)
+
+	local function card(name, pos, visible, width)
+		local f = new("Frame", {Name = name, Size = UDim2.fromOffset(width, 0), AutomaticSize = Enum.AutomaticSize.Y, Position = pos, BackgroundColor3 = T.bg,
+			BackgroundTransparency = 0.3, ZIndex = 32, Visible = visible, Parent = gui},
+			{corner(14), new("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)}),
+				new("UIListLayout", {Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder})})
+		bind(f, "BackgroundColor3", "bg")
+		bind(new("UIStroke", {Thickness = 1, Transparency = 0.7, Parent = f}), "Color", "accent")
+		local sc = new("UIScale", {Parent = f})
+		drag(f, f)
+		return f, sc
+	end
+	local function smallBtn(parent, txt, cb)
+		local b = mkText({Size = UDim2.fromOffset(40, 26), Text = txt, TextSize = 13, AutoButtonColor = false, ZIndex = 34, Parent = parent}, true, false, "TextButton")
+		b.BackgroundTransparency = 0
+		b.BackgroundColor3 = T.accent
+		b.TextColor3 = white
+		new("UICorner", {CornerRadius = UDim.new(0, 8), Parent = b})
+		table.insert(binders, function() b.BackgroundColor3 = T.accent end)
+		b.MouseButton1Click:Connect(cb)
+		return b
+	end
+
+	-- relógio
+	local clk, cks = card("AH_Clock", UDim2.new(1, -176, 0, 12), State.ClockOn, 160)
+	local ct = mkText({Size = UDim2.new(1, 0, 0, 28), Text = "", TextSize = 22, ZIndex = 33, LayoutOrder = 1, Parent = clk}, true, "accent")
+	local cd = mkText({Size = UDim2.new(1, 0, 0, 14), Text = "", TextSize = 11, ZIndex = 33, LayoutOrder = 2, Parent = clk}, false, "sub")
+	G.loop(0.5, function()
+		if not State.ClockOn then return end
+		local s = State.Clock24 and "%H:%M" or "%I:%M"
+		if State.ClockSecs then s = s .. ":%S" end
+		if not State.Clock24 then s = s .. " %p" end
+		ct.Text = os.date(s)
+		cd.Text = os.date("%a  %d/%m/%Y")
+	end)
+
+	-- pomodoro
+	local PM = {phase = "work", left = State.PomoWork * 60, run = false, cycles = 0}
+	N.PM = PM
+	local pw = card("AH_Pomo", UDim2.new(0, 12, 0, 280), State.PomoOn, 170)
+	local pl = mkText({Size = UDim2.new(1, 0, 0, 14), Text = "", TextSize = 11, ZIndex = 33, LayoutOrder = 1, Parent = pw}, true, "sub")
+	local pt = mkText({Size = UDim2.new(1, 0, 0, 30), Text = "", TextSize = 26, ZIndex = 33, LayoutOrder = 2, Parent = pw}, true, "accent")
+	local pbar = new("Frame", {Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 3, Parent = pw},
+		{new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6)})})
+	local function phaseLen()
+		if PM.phase == "work" then return State.PomoWork * 60 end
+		if PM.cycles > 0 and PM.cycles % 4 == 0 then return State.PomoLong * 60 end
+		return State.PomoBreak * 60
+	end
+	local function nextPhase(auto)
+		if PM.phase == "work" then PM.cycles = PM.cycles + 1; PM.phase = "break" else PM.phase = "work" end
+		PM.left = phaseLen()
+		if auto then
+			notify("Pomodoro", PM.phase == "work" and tr("Hora de focar!", "Time to focus!", "¡A concentrarse!") or tr("Hora da pausa!", "Break time!", "¡Hora del descanso!"), 5)
+			pcall(function() if G.Y and G.Y.ping then G.Y.ping(60) end end)
+		end
+	end
+	local playBtn = smallBtn(pbar, "▶", function() PM.run = not PM.run end)
+	smallBtn(pbar, "⏭", function() nextPhase(false) end)
+	smallBtn(pbar, "↺", function() PM.run, PM.phase, PM.left, PM.cycles = false, "work", State.PomoWork * 60, 0 end)
+	N.pomoSync = function() if not PM.run then PM.left = phaseLen() end end
+	G.loop(1, function()
+		if PM.run then
+			PM.left = PM.left - 1
+			if PM.left <= 0 then nextPhase(true) end
+		end
+		local l = math.max(PM.left, 0)
+		pt.Text = string.format("%02d:%02d", math.floor(l / 60), l % 60)
+		pl.Text = (PM.phase == "work" and tr("FOCO", "FOCUS", "ENFOQUE") or tr("PAUSA", "BREAK", "DESCANSO")) .. "  •  " .. PM.cycles
+		playBtn.Text = PM.run and "⏸" or "▶"
+	end)
+
+	-- visualizador de áudio
+	local viz = new("Frame", {Name = "AH_Viz", Size = UDim2.fromOffset(240, State.VizHeight), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -14),
+		BackgroundTransparency = 1, ZIndex = 31, Visible = State.VizOn, Parent = gui})
+	drag(viz, viz, function() return not State.VizFull end)
+	local bars = {}
+	N.recolorViz = function()
+		local n = #bars
+		for i, b in ipairs(bars) do b.f.BackgroundColor3 = T.accent:Lerp(T.accent2, (i - 1) / math.max(n - 1, 1)) end
+	end
+	table.insert(binders, function() N.recolorViz() end)
+	N.buildViz = function()
+		for _, b in ipairs(bars) do pcall(function() b.f:Destroy() end) end
+		table.clear(bars)
+		viz.Visible = State.VizOn
+		local full = State.VizFull
+		viz.Size = full and UDim2.new(1, 0, 0, State.VizHeight) or UDim2.fromOffset(240, State.VizHeight)
+		viz.AnchorPoint = full and Vector2.new(0, 1) or Vector2.new(0.5, 1)
+		viz.Position = full and UDim2.new(0, 0, 1, 0) or UDim2.new(0.5, 0, 1, -14)
+		local n, mirror = State.VizBars, State.VizStyle == "Espelho"
+		for i = 1, n do
+			local f = new("Frame", {AnchorPoint = Vector2.new(0.5, mirror and 0.5 or 1), Size = UDim2.new(1 / n, -2, 0, 3),
+				Position = UDim2.new((i - 0.5) / n, 0, mirror and 0.5 or 1, 0), BorderSizePixel = 0, ZIndex = 32, Parent = viz}, {corner(3)})
+			bars[i] = {f = f, v = 0, ph = math.random() * 6.28}
+		end
+		N.recolorViz()
+	end
+	conn(RS.RenderStepped:Connect(function(dt)
+		if not State.VizOn or #bars == 0 then return end
+		dt = math.min(dt, 0.05)
+		local snd = G.Z and G.Z.snd
+		local lv = (snd and snd.IsPlaying) and snd.PlaybackLoudness or 0
+		local norm = math.clamp(lv / 500, 0, 1)
+		local t, n = tick(), #bars
+		for i, b in ipairs(bars) do
+			local target
+			if lv > 0 then
+				target = norm * (0.45 + 0.55 * math.abs(math.sin(t * (2 + (i % 5) * 0.7) + b.ph)))
+			else
+				target = 0.05 + 0.03 * math.sin(t * 2 + b.ph + i * 0.3)
+			end
+			b.v = b.v + (target - b.v) * math.min(1, dt * 14)
+			b.f.Size = UDim2.new(1 / n, -2, 0, math.max(3, b.v * State.VizHeight))
+		end
+	end))
+
+	-- skill pad (teclas na tela)
+	local padF = new("Frame", {Name = "AH_SkillPad", Size = UDim2.fromOffset(0, 0), AutomaticSize = Enum.AutomaticSize.XY, Position = UDim2.new(1, -290, 1, -130),
+		BackgroundColor3 = T.bg, BackgroundTransparency = 1 - State.PadAlpha / 100, ZIndex = 36, Visible = State.PadOn, Parent = gui},
+		{corner(16), new("UIPadding", {PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}),
+			new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center})})
+	bind(padF, "BackgroundColor3", "bg")
+	local numMap = {["1"] = "One", ["2"] = "Two", ["3"] = "Three", ["4"] = "Four", ["5"] = "Five", ["6"] = "Six", ["7"] = "Seven", ["8"] = "Eight", ["9"] = "Nine", ["0"] = "Zero"}
+	local function kcOf(tok)
+		tok = tok:upper()
+		tok = numMap[tok] or tok
+		local ok, kc = pcall(function() return Enum.KeyCode[tok] end)
+		if ok and kc then return kc end
+	end
+	local padBtns = {}
+	N.buildPad = function()
+		for _, c in ipairs(padF:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+		table.clear(padBtns)
+		padF.Visible = State.PadOn
+		padF.BackgroundTransparency = 1 - State.PadAlpha / 100
+		local S = State.PadSize
+		local handle = new("TextButton", {Size = UDim2.fromOffset(22, S), BackgroundTransparency = 1, Text = "≡", TextSize = 20, TextColor3 = T.sub, Font = Enum.Font.GothamBold,
+			AutoButtonColor = false, LayoutOrder = 0, ZIndex = 37, Parent = padF})
+		bind(handle, "TextColor3", "sub")
+		drag(handle, padF)
+		local idx = 0
+		for tok in State.PadKeys:gmatch("[^,%s]+") do
+			local kc = kcOf(tok)
+			if kc and idx < 8 then
+				idx = idx + 1
+				local b = new("TextButton", {Size = UDim2.fromOffset(S, S), BackgroundColor3 = T.accent, Text = tok:upper(), TextSize = math.floor(S * 0.34), Font = Enum.Font.GothamBold,
+					TextColor3 = white, AutoButtonColor = false, LayoutOrder = idx, ZIndex = 37, Parent = padF}, {corner(S)})
+				local sc = new("UIScale", {Parent = b})
+				b.InputBegan:Connect(function(i)
+					if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+						tween(sc, 0.1, {Scale = 0.88})
+						pcall(function() VIM:SendKeyEvent(true, kc, false, game) end)
+					end
+				end)
+				b.InputEnded:Connect(function(i)
+					if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+						tween(sc, 0.2, {Scale = 1}, Enum.EasingStyle.Back)
+						pcall(function() VIM:SendKeyEvent(false, kc, false, game) end)
+					end
+				end)
+				padBtns[idx] = b
+			end
+		end
+		for i, b in ipairs(padBtns) do b.BackgroundColor3 = T.accent:Lerp(T.accent2, (i - 1) / math.max(#padBtns - 1, 1)) end
+	end
+	table.insert(binders, function()
+		for i, b in ipairs(padBtns) do b.BackgroundColor3 = T.accent:Lerp(T.accent2, (i - 1) / math.max(#padBtns - 1, 1)) end
+	end)
+
+	-- menu radial
+	local S0 = State.RadialSize
+	local rad = new("Frame", {Name = "AH_Radial", Size = UDim2.fromOffset(S0, S0), Position = UDim2.new(1, -90, 0.55, 0), BackgroundTransparency = 1, ZIndex = 40, Visible = State.RadialOn, Parent = gui})
+	local center = new("TextButton", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = white, Text = "✦", TextSize = 20, Font = Enum.Font.GothamBold, TextColor3 = white, AutoButtonColor = false, ZIndex = 42, Parent = rad}, {corner(100)})
+	bind(new("UIGradient", {Rotation = 45, Parent = center}), "Color", gradSeq, true)
+	new("UIStroke", {Color = white, Transparency = 0.6, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = center})
+	local rst = drag(center, rad)
+	local ritems, ropen = {}, false
+	local function placeItems()
+		local n, S = #ritems, State.RadialSize
+		local R = math.max(66, n * 12)
+		for i, it in ipairs(ritems) do
+			local ang = (i - 1) / math.max(n, 1) * math.pi * 2 - math.pi / 2
+			if ropen then
+				it.b.Visible = true
+				tween(it.b, 0.4, {Position = UDim2.fromOffset(S / 2 + math.cos(ang) * R, S / 2 + math.sin(ang) * R), BackgroundTransparency = 0, TextTransparency = 0}, Enum.EasingStyle.Back)
+			else
+				tween(it.b, 0.25, {Position = UDim2.fromOffset(S / 2, S / 2), BackgroundTransparency = 1, TextTransparency = 1})
+				task.delay(0.27, function() if not ropen then it.b.Visible = false end end)
+			end
+		end
+	end
+	center.MouseButton1Click:Connect(function()
+		if rst.moved then return end
+		uiSound()
+		ropen = not ropen
+		placeItems()
+	end)
+	N.buildRadial = function()
+		for _, it in ipairs(ritems) do pcall(function() it.b:Destroy() end) end
+		table.clear(ritems)
+		local S = State.RadialSize
+		rad.Size = UDim2.fromOffset(S, S)
+		rad.Visible = State.RadialOn
+		ropen = false
+		for _, name in ipairs(State.RadialItems) do
+			local key = G.FeatMap[name]
+			if key then
+				local b = new("TextButton", {Size = UDim2.fromOffset(44, 44), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(S / 2, S / 2), BackgroundColor3 = T.row,
+					BackgroundTransparency = 1, Text = name, TextSize = 9, TextWrapped = true, TextColor3 = T.text, TextTransparency = 1, AutoButtonColor = false, Visible = false, ZIndex = 41, Parent = rad}, {corner(22)})
+				regFont(b, true)
+				b.MouseButton1Click:Connect(function()
+					uiSound()
+					State[key] = not State[key]
+					if G.after[key] then pcall(G.after[key], State[key]) end
+					syncAll()
+				end)
+				ritems[#ritems + 1] = {b = b, key = key}
+			end
+		end
+	end
+	G.loop(0.25, function()
+		if not ropen then return end
+		for _, it in ipairs(ritems) do
+			local on = State[it.key]
+			it.b.BackgroundColor3 = on and T.accent or T.row
+			it.b.TextColor3 = on and white or T.text
+		end
+	end)
+
+	N.applyWidgets = function()
+		clk.Visible = State.ClockOn
+		cks.Scale = State.ClockScale / 100
+		pw.Visible = State.PomoOn
+		viz.Visible = State.VizOn
+		padF.Visible = State.PadOn
+		padF.BackgroundTransparency = 1 - State.PadAlpha / 100
+		rad.Visible = State.RadialOn
+	end
+	G.after.ClockOn = N.applyWidgets
+	G.after.PomoOn = N.applyWidgets
+	G.after.VizOn = N.applyWidgets
+	G.after.PadOn = N.applyWidgets
+	G.after.RadialOn = N.applyWidgets
+
+	-- o botão "resetar widgets" da Parte 6 também traz os novos de volta
+	local oldReset = G.W.resetWidgets
+	G.W.resetWidgets = function()
+		oldReset()
+		local function set(n, p) local f = gui:FindFirstChild(n) if f then f.Position = p end end
+		set("AH_Clock", UDim2.new(1, -176, 0, 12))
+		set("AH_Pomo", UDim2.new(0, 12, 0, 280))
+		set("AH_SkillPad", UDim2.new(1, -290, 1, -130))
+		set("AH_Radial", UDim2.new(1, -90, 0.55, 0))
+		set("AH_Viz", State.VizFull and UDim2.new(0, 0, 1, 0) or UDim2.new(0.5, 0, 1, -14))
+	end
+end)()
+
+------------------------------------------------------------------
+-- BLOCO 6: perfil, rank e sequência de dias
+------------------------------------------------------------------
+;(function()
+	if not (G and G.N9) then return end
+	local N = G.N9
+	local SF = "AppleHub_v80_streak.json"
+	N.streak = {last = "", n = 0, best = 0}
+	pcall(function()
+		if isfile and isfile(SF) then
+			local d = HttpService:JSONDecode(readfile(SF))
+			for k in pairs(N.streak) do if d[k] ~= nil then N.streak[k] = d[k] end end
+		end
+	end)
+	local today, yest = os.date("%Y-%m-%d"), os.date("%Y-%m-%d", os.time() - 86400)
+	if N.streak.last ~= today then
+		N.streak.n = (N.streak.last == yest) and ((tonumber(N.streak.n) or 0) + 1) or 1
+		N.streak.last = today
+		N.streak.best = math.max(tonumber(N.streak.best) or 0, N.streak.n)
+		pcall(function() writefile(SF, HttpService:JSONEncode(N.streak)) end)
+	end
+	local RANKS = {
+		{0, "Novato", "Rookie", "Novato", "🌱"}, {5, "Aprendiz", "Apprentice", "Aprendiz", "📘"}, {15, "Explorador", "Explorer", "Explorador", "🧭"},
+		{40, "Veterano", "Veteran", "Veterano", "⚔"}, {100, "Mestre", "Master", "Maestro", "👑"}, {250, "Lenda", "Legend", "Leyenda", "🔥"},
+		{500, "Mítico", "Mythic", "Mítico", "💎"},
+	}
+	N.rank = function()
+		local h = (G.Y and G.Y.life and G.Y.life.secs or 0) / 3600
+		local idx = 1
+		for i, r in ipairs(RANKS) do if h >= r[1] then idx = i end end
+		local cur, nxt = RANKS[idx], RANKS[idx + 1]
+		return {
+			idx = idx, icon = cur[5], hours = h, name = N.tr(cur[2], cur[3], cur[4]),
+			ratio = nxt and math.clamp((h - cur[1]) / (nxt[1] - cur[1]), 0, 1) or 1,
+			nextName = nxt and N.tr(nxt[2], nxt[3], nxt[4]) or nil, nextH = nxt and nxt[1] or nil,
+		}
+	end
+	N.cardText = function()
+		local r, c = N.rank(), G.commas
+		return table.concat({
+			"Apple Hub — " .. lp.DisplayName,
+			"Rank: " .. r.icon .. " " .. r.name .. string.format("  (%.1f h)", r.hours),
+			"Level: " .. c(G.dataVal("Level") or 0) .. "   Beli: " .. c(G.dataVal("Beli") or 0),
+			N.tr("Sequência: ", "Streak: ", "Racha: ") .. N.streak.n .. N.tr(" dias (recorde ", " days (best ", " días (récord ") .. N.streak.best .. ")",
+			N.tr("Kills totais: ", "Total kills: ", "Kills totales: ") .. c(G.Y and G.Y.life and G.Y.life.kills or 0),
+		}, "\n")
+	end
+end)()
+
+------------------------------------------------------------------
+-- BLOCO 7: 8 idiomas extras (nl, uk, ro, sv, cs, el, hi, th)
+------------------------------------------------------------------
+;(function()
+	if not (G and G.N9) then return end
+	local N = G.N9
+	local genv = (getgenv and getgenv()) or _G
+	local XL = {"nl", "uk", "ro", "sv", "cs", "el", "hi", "th"}
+	local XI = {}
+	for i, c in ipairs(XL) do XI[c] = i end
+	local X, rev, ptOrig = {}, {}, {}
+	-- ordem: en|nl|uk|ro|sv|cs|el|hi|th
+	local function XA(pt, packed)
+		local arr = {}
+		for part in string.gmatch(packed, "[^|]+") do arr[#arr + 1] = part end
+		X[pt:lower()] = arr
+		ptOrig[pt:lower()] = pt
+	end
+	XA("Início", "Home|Start|Головна|Acasă|Hem|Domů|Αρχική|होम|หน้าแรก")
+	XA("Estilo", "Style|Stijl|Стиль|Stil|Stil|Styl|Στυλ|शैली|สไตล์")
+	XA("Painel", "Panel|Paneel|Панель|Panou|Panel|Panel|Πάνελ|पैनल|แผง")
+	XA("Abas", "Tabs|Tabbladen|Вкладки|File|Flikar|Karty|Καρτέλες|टैब|แท็บ")
+	XA("Botões", "Buttons|Knoppen|Кнопки|Butoane|Knappar|Tlačítka|Κουμπιά|बटन|ปุ่ม")
+	XA("Partículas", "Particles|Deeltjes|Частинки|Particule|Partiklar|Částice|Σωματίδια|कण|อนุภาค")
+	XA("Atalhos", "Shortcuts|Sneltoetsen|Гарячі клавіші|Scurtături|Genvägar|Zkratky|Συντομεύσεις|शॉर्टकट|ทางลัด")
+	XA("Config", "Settings|Instellingen|Налаштування|Setări|Inställningar|Nastavení|Ρυθμίσεις|सेटिंग्स|ตั้งค่า")
+	XA("Mapa", "Map|Kaart|Карта|Hartă|Karta|Mapa|Χάρτης|नक्शा|แผนที่")
+	XA("Comandos", "Commands|Commando's|Команди|Comenzi|Kommandon|Příkazy|Εντολές|कमांड|คำสั่ง")
+	XA("Filtros", "Filters|Filters|Фільтри|Filtre|Filter|Filtry|Φίλτρα|फ़िल्टर|ฟิลเตอร์")
+	XA("Jogadores", "Players|Spelers|Гравці|Jucători|Spelare|Hráči|Παίκτες|खिलाड़ी|ผู้เล่น")
+	XA("Servidores", "Servers|Servers|Сервери|Servere|Servrar|Servery|Διακομιστές|सर्वर|เซิร์ฟเวอร์")
+	XA("Frutas", "Fruits|Fruit|Фрукти|Fructe|Frukter|Ovoce|Φρούτα|फल|ผลไม้")
+	XA("Automação", "Automation|Automatisering|Автоматизація|Automatizare|Automatisering|Automatizace|Αυτοματισμός|ऑटोमेशन|ระบบอัตโนมัติ")
+	XA("Ferramentas", "Tools|Hulpmiddelen|Інструменти|Unelte|Verktyg|Nástroje|Εργαλεία|उपकरण|เครื่องมือ")
+	XA("Efeitos", "Effects|Effecten|Ефекти|Efecte|Effekter|Efekty|Εφέ|प्रभाव|เอฟเฟกต์")
+	XA("Metas", "Goals|Doelen|Цілі|Obiective|Mål|Cíle|Στόχοι|लक्ष्य|เป้าหมาย")
+	XA("Loja", "Shop|Winkel|Магазин|Magazin|Butik|Obchod|Κατάστημα|दुकान|ร้านค้า")
+	XA("Inventário", "Inventory|Inventaris|Інвентар|Inventar|Inventarie|Inventář|Απόθεμα|इन्वेंटरी|คลังของ")
+	XA("Lembretes", "Reminders|Herinneringen|Нагадування|Memento-uri|Påminnelser|Připomínky|Υπενθυμίσεις|रिमाइंडर|เตือนความจำ")
+	XA("Sessão", "Session|Sessie|Сесія|Sesiune|Session|Relace|Συνεδρία|सत्र|เซสชัน")
+	XA("Idioma", "Language|Taal|Мова|Limbă|Språk|Jazyk|Γλώσσα|भाषा|ภาษา")
+	XA("Diagnóstico", "Diagnostics|Diagnose|Діагностика|Diagnostic|Diagnostik|Diagnostika|Διάγνωση|डायग्नोस्टिक|การวินิจฉัย")
+	XA("Conquistas", "Achievements|Trofeeën|Досягнення|Realizări|Prestationer|Úspěchy|Επιτεύγματα|उपलब्धियाँ|ความสำเร็จ")
+	XA("Rotas", "Routes|Routes|Маршрути|Rute|Rutter|Trasy|Διαδρομές|मार्ग|เส้นทาง")
+	XA("Foto & Câmera", "Photo & Camera|Foto & Camera|Фото та камера|Foto și cameră|Foto & kamera|Foto a kamera|Φωτογραφία & κάμερα|फ़ोटो और कैमरा|ภาพถ่ายและกล้อง")
+	XA("Laboratório", "Lab|Lab|Лабораторія|Laborator|Labb|Laboratoř|Εργαστήριο|लैब|แล็บ")
+	XA("Visual", "Visual|Visueel|Візуал|Vizual|Visuellt|Vizuál|Εικόνα|दृश्य|ภาพ")
+	XA("Layouts", "Layouts|Indelingen|Макети|Aspecte|Layouter|Rozvržení|Διατάξεις|लेआउट|เลย์เอาต์")
+	XA("Stats", "Stats|Statistieken|Статистика|Statistici|Statistik|Statistiky|Στατιστικά|आँकड़े|สถิติ")
+	XA("Teleport", "Teleport|Teleporteren|Телепорт|Teleportare|Teleportera|Teleport|Τηλεμεταφορά|टेलीपोर्ट|วาร์ป")
+	XA("Player", "Player|Speler|Гравець|Jucător|Spelare|Hráč|Παίκτης|प्लेयर|ตัวละคร")
+	XA("Info", "Info|Info|Інфо|Info|Info|Info|Πληροφορίες|जानकारी|ข้อมูล")
+	XA("Galeria", "Gallery|Galerij|Галерея|Galerie|Galleri|Galerie|Γκαλερί|गैलरी|แกลเลอรี")
+	XA("Brilho", "Glow|Gloed|Сяйво|Strălucire|Glöd|Záře|Λάμψη|चमक|เรืองแสง")
+	XA("Perfil", "Profile|Profiel|Профіль|Profil|Profil|Profil|Προφίλ|प्रोफ़ाइल|โปรไฟล์")
+	XA("Widgets", "Widgets|Widgets|Віджети|Widgeturi|Widgetar|Widgety|Γραφικά στοιχεία|विजेट|วิดเจ็ต")
+	XA("Resumo", "Summary|Samenvatting|Підсумок|Rezumat|Sammanfattning|Souhrn|Σύνοψη|सारांश|สรุป")
+	XA("Combate", "Combat|Gevecht|Бій|Luptă|Strid|Boj|Μάχη|युद्ध|การต่อสู้")
+	XA("Compras", "Purchases|Aankopen|Покупки|Achiziții|Köp|Nákupy|Αγορές|खरीदारी|การซื้อ")
+	XA("Códigos", "Codes|Codes|Коди|Coduri|Koder|Kódy|Κωδικοί|कोड|โค้ด")
+	XA("Conta", "Account|Account|Акаунт|Cont|Konto|Účet|Λογαριασμός|खाता|บัญชี")
+	XA("Mares", "Seas|Zeeën|Моря|Mări|Hav|Moře|Θάλασσες|समुद्र|ทะเล")
+	XA("Utilidades", "Utilities|Hulpprogramma's|Утиліти|Utilitare|Hjälpmedel|Pomůcky|Βοηθήματα|सुविधाएँ|ยูทิลิตี้")
+	XA("Ambiente", "Environment|Omgeving|Середовище|Mediu|Miljö|Prostředí|Περιβάλλον|वातावरण|สภาพแวดล้อม")
+	XA("Desempenho", "Performance|Prestaties|Продуктивність|Performanță|Prestanda|Výkon|Απόδοση|प्रदर्शन|ประสิทธิภาพ")
+	XA("Movimento", "Movement|Beweging|Рух|Mișcare|Rörelse|Pohyb|Κίνηση|चाल|การเคลื่อนที่")
+	XA("Temas", "Themes|Thema's|Теми|Teme|Teman|Motivy|Θέματα|थीम|ธีม")
+	XA("Fundo", "Background|Achtergrond|Тло|Fundal|Bakgrund|Pozadí|Φόντο|पृष्ठभूमि|พื้นหลัง")
+	XA("Bordas", "Borders|Randen|Рамки|Borduri|Kanter|Okraje|Περιγράμματα|किनारे|ขอบ")
+	XA("Janela", "Window|Venster|Вікно|Fereastră|Fönster|Okno|Παράθυρο|विंडो|หน้าต่าง")
+	XA("Notificações", "Notifications|Meldingen|Сповіщення|Notificări|Aviseringar|Oznámení|Ειδοποιήσεις|सूचनाएँ|การแจ้งเตือน")
+	XA("Restaurar", "Restore|Herstellen|Відновлення|Restaurare|Återställ|Obnovení|Επαναφορά|पुनर्स्थापित|กู้คืน")
+	XA("Configuração", "Configuration|Configuratie|Конфігурація|Configurație|Konfiguration|Konfigurace|Διαμόρφωση|विन्यास|การกำหนดค่า")
+	XA("Compartilhar", "Share|Delen|Поділитися|Distribuie|Dela|Sdílet|Κοινοποίηση|साझा करें|แชร์")
+	XA("Voar", "Fly|Vliegen|Політ|Zbor|Flyga|Létání|Πτήση|उड़ना|บิน")
+	XA("Velocidade", "Speed|Snelheid|Швидкість|Viteză|Hastighet|Rychlost|Ταχύτητα|रफ़्तार|ความเร็ว")
+	XA("Gravidade", "Gravity|Zwaartekracht|Гравітація|Gravitație|Gravitation|Gravitace|Βαρύτητα|गुरुत्वाकर्षण|แรงโน้มถ่วง")
+	XA("Trocar de servidor", "Switch server|Server wisselen|Змінити сервер|Schimbă serverul|Byt server|Změnit server|Αλλαγή διακομιστή|सर्वर बदलें|เปลี่ยนเซิร์ฟเวอร์")
+	XA("Resetar personagem", "Reset character|Personage resetten|Скинути персонажа|Resetează personajul|Återställ karaktär|Resetovat postavu|Επαναφορά χαρακτήρα|किरदार रीसेट करें|รีเซ็ตตัวละคร")
+	XA("Salvar aparência e ajustes", "Save appearance and settings|Uiterlijk en instellingen opslaan|Зберегти вигляд і налаштування|Salvează aspectul și setările|Spara utseende och inställningar|Uložit vzhled a nastavení|Αποθήκευση εμφάνισης και ρυθμίσεων|रूप और सेटिंग्स सहेजें|บันทึกรูปลักษณ์และการตั้งค่า")
+	XA("Tema aleatório", "Random theme|Willekeurig thema|Випадкова тема|Temă aleatorie|Slumpmässigt tema|Náhodný motiv|Τυχαίο θέμα|रैंडम थीम|ธีมสุ่ม")
+	XA("Atualizar lista", "Refresh list|Lijst vernieuwen|Оновити список|Reîmprospătează lista|Uppdatera listan|Obnovit seznam|Ανανέωση λίστας|सूची ताज़ा करें|รีเฟรชรายการ")
+	XA("Pronto!", "Ready!|Klaar!|Готово!|Gata!|Klart!|Hotovo!|Έτοιμο!|तैयार!|เสร็จแล้ว!")
+	XA("Iniciando...", "Starting...|Starten...|Запуск...|Se pornește...|Startar...|Spouštění...|Εκκίνηση...|शुरू हो रहा है...|กำลังเริ่ม...")
+	XA("toque para pular", "tap to skip|tik om over te slaan|торкніться, щоб пропустити|atinge pentru a sări|tryck för att hoppa över|klepnutím přeskočit|πατήστε για παράλειψη|छोड़ने के लिए टैप करें|แตะเพื่อข้าม")
+	XA("Descarregar hub", "Unload hub|Hub afsluiten|Вивантажити хаб|Descarcă hubul|Stäng hubben|Ukončit hub|Κλείσιμο hub|हब बंद करें|ปิดฮับ")
+	XA("Buscar...", "Search...|Zoeken...|Пошук...|Caută...|Sök...|Hledat...|Αναζήτηση...|खोजें...|ค้นหา...")
+
+	-- mapa reverso: texto em qualquer idioma -> chave em português
+	for k in pairs(X) do rev[k] = k end
+	for k, arr in pairs(X) do
+		for _, s in ipairs(arr) do
+			local l = s:lower()
+			if rev[l] == nil then rev[l] = k end
+		end
+	end
+	local function resolve(text)
+		if type(text) ~= "string" or text == "" then return nil end
+		local k = rev[text:lower()]
+		if k then return k, "", (text == text:upper() and text ~= text:lower()) end
+		local pre, rest = text:match("^(.-  )(.+)$")
+		if not pre then pre, rest = text:match("^([^%w%s]+%s+)(.+)$") end
+		if rest then
+			k = rev[rest:lower()]
+			if k then return k, pre, (rest == rest:upper() and rest ~= rest:lower()) end
+		end
+	end
+
+	local recs = setmetatable({}, {__mode = "k"})
+	local active = nil
+	local function propOf(inst)
+		if inst:IsA("TextBox") then return "PlaceholderText" end
+		if inst:IsA("TextLabel") or inst:IsA("TextButton") then return "Text" end
+	end
+	local function apply(inst, rec)
+		if not active or not rec.key then return end
+		local arr = X[rec.key]
+		local t = arr and arr[1 + active]
+		if not t then return end
+		if rec.up and not t:find("[\128-\255]") then t = t:upper() end
+		local want = rec.pre .. t
+		if inst[rec.prop] ~= want then
+			rec.setting = true
+			rec.xText = want
+			inst[rec.prop] = want
+			rec.setting = false
+		end
+	end
+	local function hook(inst)
+		if recs[inst] then return end
+		local prop = propOf(inst)
+		if not prop then return end
+		local k, pre, up = resolve(inst[prop])
+		if not k then return end
+		local rec = {prop = prop, key = k, pre = pre, up = up}
+		recs[inst] = rec
+		inst:GetPropertyChangedSignal(prop):Connect(function()
+			if rec.setting then return end
+			local v = inst[prop]
+			if v == rec.xText then return end
+			local k2, p2, u2 = resolve(v)
+			if k2 then
+				rec.key, rec.pre, rec.up = k2, p2, u2
+				if active then apply(inst, rec) end
+			else
+				rec.key = nil
+			end
+		end)
+		if active then apply(inst, rec) end
+	end
+	local function restore()
+		for inst, rec in pairs(recs) do
+			if rec.key and rec.xText and inst[rec.prop] == rec.xText then
+				local pt = ptOrig[rec.key]
+				if pt then
+					if rec.up then pt = pt:upper() end
+					rec.setting = true
+					inst[rec.prop] = rec.pre .. pt
+					rec.setting = false
+				end
+			end
+			rec.xText = nil
+		end
+	end
+	N.setLang = function(code)
+		local was = active
+		active = XI[code]
+		if not active then
+			if was then restore() end
+			return
+		end
+		for _, d in ipairs(gui:GetDescendants()) do pcall(hook, d) end
+		for inst, rec in pairs(recs) do
+			if rec.key then pcall(apply, inst, rec) end
+		end
+	end
+	conn(gui.DescendantAdded:Connect(function(d)
+		task.defer(function() pcall(hook, d) end)
+	end))
+
+	-- encaixa na troca de idioma (Partes 7 e 8)
+	local oldSet = G.L.set
+	G.L.set = function(code, silent)
+		oldSet(code, silent)
+		N.setLang(code)
+	end
+	N.langCount = 14 + #XL
+	N.setLang(genv.AppleHubLang or "pt")
+end)()
+
+------------------------------------------------------------------
+-- BLOCO 8: páginas novas
+------------------------------------------------------------------
+;(function()
+	if not (G and G.N9) then return end
+	local N = G.N9
+	local tr, commas = N.tr, G.commas
+	local genv = (getgenv and getgenv()) or _G
+	local white = Color3.new(1, 1, 1)
+	local function newPage(pt, en, es, icon)
+		local name = tr(pt, en, es)
+		N.pages[name] = true
+		if G.Z and G.Z.pages then G.Z.pages[name] = true end
+		return addPage(name, icon), name
+	end
+
+	------------------------------------------------ GALERIA
+	local pGal = newPage("Galeria", "Gallery", "Galería", "❖")
+	Section(pGal, tr("Favoritos", "Favorites", "Favoritos"))
+	local favGrid = Grid(pGal, 134, 38)
+	N.refreshFavs = function()
+		for _, c in ipairs(favGrid:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+		local names = {}
+		for n, v in pairs(State.FavThemes) do if v and Themes[n] then names[#names + 1] = n end end
+		table.sort(names)
+		for _, n in ipairs(names) do
+			local tt = Themes[n]
+			local b = new("TextButton", {BackgroundColor3 = tt.row, Text = "★ " .. n, TextSize = 12, TextColor3 = tt.text, AutoButtonColor = false, Font = Enum.Font.GothamBold, Parent = favGrid}, {rc(11)})
+			new("UIStroke", {Color = tt.accent, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = b})
+			b.MouseButton1Click:Connect(function() uiSound(); applyTheme(n) end)
+		end
+	end
+	Button(pGal, tr("★ Favoritar / desfavoritar o tema atual", "★ Favorite / unfavorite current theme", "★ Favorito / quitar el tema actual"), function()
+		State.FavThemes[State.Theme] = (not State.FavThemes[State.Theme]) or nil
+		N.refreshFavs()
+	end)
+	Section(pGal, tr("Tema do dia", "Theme of the day", "Tema del día"))
+	Button(pGal, tr("Aplicar o tema do dia", "Apply theme of the day", "Aplicar el tema del día"), function() N.daily(false) end)
+	Toggle(pGal, tr("Aplicar o tema do dia ao abrir", "Apply theme of the day on start", "Aplicar el tema del día al abrir"), "DailyTheme")
+	Section(pGal, tr("30 temas novos (toque na ☆ para favoritar)", "30 new themes (tap ☆ to favorite)", "30 temas nuevos (toca la ☆ para favorito)"))
+	local g = Grid(pGal, 134, 58)
+	for _, name in ipairs(N.themeNames) do
+		local tt = Themes[name]
+		local b = new("TextButton", {BackgroundColor3 = tt.bg, Text = "", AutoButtonColor = false, Parent = g}, {rc(12)})
+		new("Frame", {Size = UDim2.new(1, -12, 0, 16), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = white, Parent = b},
+			{corner(6), new("UIGradient", {Color = ColorSequence.new(tt.accent, tt.accent2)})})
+		new("Frame", {Size = UDim2.new(1, -12, 0, 8), Position = UDim2.fromOffset(6, 27), BackgroundColor3 = tt.row, Parent = b}, {corner(4)})
+		new("TextLabel", {Size = UDim2.new(1, 0, 0, 16), Position = UDim2.fromOffset(0, 38), BackgroundTransparency = 1, Text = name, Font = Enum.Font.GothamBold, TextSize = 11, TextColor3 = tt.text, Parent = b})
+		local st = new("UIStroke", {Thickness = 2.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Enabled = (State.Theme == name), Parent = b})
+		bind(st, "Color", "accent")
+		themeStrokes[name] = st
+		b.MouseButton1Click:Connect(function() uiSound(); applyTheme(name) end)
+		local star = new("TextButton", {Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -3, 0, 35), BackgroundTransparency = 1,
+			Text = State.FavThemes[name] and "★" or "☆", TextSize = 14, TextColor3 = tt.accent, ZIndex = 3, AutoButtonColor = false, Parent = b})
+		star.MouseButton1Click:Connect(function()
+			State.FavThemes[name] = (not State.FavThemes[name]) or nil
+			star.Text = State.FavThemes[name] and "★" or "☆"
+			N.refreshFavs()
+		end)
+	end
+	N.refreshFavs()
+	Section(pGal, tr("Gerador de paleta", "Palette generator", "Generador de paleta"))
+	Slider(pGal, tr("Matiz (cor base)", "Hue (base color)", "Matiz (color base)"), 0, 360, "GenHue", nil, "°")
+	Slider(pGal, tr("Saturação", "Saturation", "Saturación"), 10, 100, "GenSat", nil, "%")
+	Dropdown(pGal, tr("Modo", "Mode", "Modo"), {"Escuro", "Claro"}, "GenMode")
+	Dropdown(pGal, tr("Harmonia", "Harmony", "Armonía"), {"Análoga", "Complementar", "Triádica", "Dividida"}, "GenHarm")
+	Button(pGal, tr("Gerar e aplicar", "Generate and apply", "Generar y aplicar"), function() N.gen() end)
+	Button(pGal, tr("🎲 Paleta aleatória", "🎲 Random palette", "🎲 Paleta aleatoria"), function()
+		State.GenHue, State.GenSat = math.random(0, 360), math.random(45, 95)
+		syncAll()
+		N.gen()
+	end)
+	Section(pGal, tr("Misturador de temas", "Theme mixer", "Mezclador de temas"))
+	Input(pGal, tr("Misturar o atual com", "Mix current with", "Mezclar el actual con"), tr("nome do tema e Enter", "theme name and Enter", "nombre del tema y Enter"), function(t) State.MixB = t; notify("Tema", t, 1.5) end)
+	InfoRow(pGal, tr("Segundo tema", "Second theme", "Segundo tema"), function() return State.MixB ~= "" and State.MixB or "—" end)
+	Slider(pGal, tr("Quantidade do segundo", "Amount of the second", "Cantidad del segundo"), 0, 100, "MixPct", nil, "%")
+	Button(pGal, tr("Misturar e aplicar", "Mix and apply", "Mezclar y aplicar"), function() N.mix() end)
+
+	------------------------------------------------ BRILHO
+	local pFx = newPage("Brilho", "Glow", "Brillo", "✺")
+	Section(pFx, tr("Painel", "Panel", "Panel"))
+	Toggle(pFx, tr("Borda de gradiente girando", "Spinning gradient border", "Borde degradado giratorio"), "AnimBorder", function() N.applyFx() end)
+	Slider(pFx, tr("Velocidade da borda", "Border speed", "Velocidad del borde"), 10, 360, "BorderSpeed", nil, "°/s")
+	Slider(pFx, tr("Espessura da borda", "Border thickness", "Grosor del borde"), 1, 6, "BorderThick9", function() N.applyFx() end, " px")
+	Toggle(pFx, tr("Sombra atrás do painel", "Shadow behind the panel", "Sombra detrás del panel"), "Shadow")
+	Slider(pFx, tr("Tamanho da sombra", "Shadow size", "Tamaño de la sombra"), 4, 40, "ShadowSize", nil, " px")
+	Slider(pFx, tr("Força da sombra", "Shadow strength", "Fuerza de la sombra"), 10, 100, "ShadowAlpha", nil, "%")
+	Toggle(pFx, tr("Brilho animado no título", "Animated title shine", "Brillo animado en el título"), "TitleShine")
+	Section(pFx, tr("Fundo Aurora", "Aurora background", "Fondo Aurora"))
+	Toggle(pFx, tr("Manchas de luz flutuando", "Floating light blobs", "Manchas de luz flotando"), "Aurora", function() N.buildAurora() end)
+	Slider(pFx, tr("Quantidade", "Amount", "Cantidad"), 1, 8, "AuroraCount", function() N.buildAurora() end)
+	Slider(pFx, tr("Velocidade", "Speed", "Velocidad"), 5, 100, "AuroraSpeed")
+	Slider(pFx, tr("Intensidade", "Intensity", "Intensidad"), 10, 100, "AuroraInt", function() N.recolorAurora() end, "%")
+	Section(pFx, tr("Toque e animações", "Touch and animations", "Toque y animaciones"))
+	Toggle(pFx, tr("Rastro luminoso do dedo", "Glowing finger trail", "Rastro luminoso del dedo"), "FingerTrail")
+	Slider(pFx, tr("Tamanho do rastro", "Trail size", "Tamaño del rastro"), 4, 28, "TrailSize", nil, " px")
+	Dropdown(pFx, tr("Cor do rastro", "Trail color", "Color del rastro"), {"Tema", "Arco-íris", "Branco"}, "TrailColor9")
+	Toggle(pFx, tr("Bolha minimizada pulsando", "Pulsing minimized bubble", "Burbuja minimizada pulsando"), "BubblePulse")
+	Toggle(pFx, tr("Confete ao desbloquear conquista", "Confetti on achievement", "Confeti al desbloquear logro"), "Confetti")
+	Button(pFx, tr("🎉 Testar confete", "🎉 Test confetti", "🎉 Probar confeti"), function() N.confetti() end)
+	Section(pFx, tr("Notificações v2", "Notifications v2", "Notificaciones v2"))
+	Toggle(pFx, tr("Notificações com ícone e barra de tempo", "Notifications with icon and timer bar", "Notificaciones con icono y barra"), "NotifV2")
+	Button(pFx, tr("Testar: normal", "Test: normal", "Probar: normal"), function() notify("Apple Hub", tr("Tudo funcionando!", "Everything works!", "¡Todo funciona!"), 3) end)
+	Button(pFx, tr("Testar: aviso", "Test: warning", "Probar: aviso"), function() notify("⚠ " .. tr("Atenção", "Warning", "Atención"), tr("Exemplo de aviso.", "Example warning.", "Ejemplo de aviso."), 3) end)
+	Button(pFx, tr("Testar: conquista", "Test: achievement", "Probar: logro"), function() notify("★ " .. tr("Conquista", "Achievement", "Logro"), tr("Exemplo de conquista.", "Example achievement.", "Ejemplo de logro."), 3) end)
+
+	------------------------------------------------ WIDGETS
+	local pWid = newPage("Widgets", "Widgets", "Widgets", "▦")
+	Label(pWid, tr("Todos os widgets são arrastáveis. Perdeu algum? Use a aba Layouts → resetar widgets.", "All widgets are draggable. Lost one? Use the Layouts tab → reset widgets.", "Todos los widgets se arrastran. ¿Perdiste uno? Pestaña Layouts → resetear widgets."))
+	Section(pWid, tr("Relógio", "Clock", "Reloj"))
+	Toggle(pWid, tr("Mostrar relógio", "Show clock", "Mostrar reloj"), "ClockOn", function() N.applyWidgets() end)
+	Toggle(pWid, tr("Formato 24 horas", "24-hour format", "Formato 24 horas"), "Clock24")
+	Toggle(pWid, tr("Mostrar segundos", "Show seconds", "Mostrar segundos"), "ClockSecs")
+	Slider(pWid, tr("Tamanho", "Size", "Tamaño"), 60, 180, "ClockScale", function() N.applyWidgets() end, "%")
+	Section(pWid, "Pomodoro")
+	Toggle(pWid, tr("Mostrar pomodoro", "Show pomodoro", "Mostrar pomodoro"), "PomoOn", function() N.applyWidgets() end)
+	Slider(pWid, tr("Foco", "Focus", "Enfoque"), 5, 90, "PomoWork", function() N.pomoSync() end, " min")
+	Slider(pWid, tr("Pausa curta", "Short break", "Descanso corto"), 1, 30, "PomoBreak", function() N.pomoSync() end, " min")
+	Slider(pWid, tr("Pausa longa (a cada 4 focos)", "Long break (every 4 focus rounds)", "Descanso largo (cada 4 enfoques)"), 5, 60, "PomoLong", function() N.pomoSync() end, " min")
+	Section(pWid, tr("Visualizador de áudio", "Audio visualizer", "Visualizador de audio"))
+	Label(pWid, tr("Reage à música tocada na aba Ferramentas (player de música).", "Reacts to the music played in the Tools tab (music player).", "Reacciona a la música de la pestaña Herramientas."))
+	Toggle(pWid, tr("Mostrar visualizador", "Show visualizer", "Mostrar visualizador"), "VizOn", function() N.applyWidgets() end)
+	Dropdown(pWid, tr("Estilo", "Style", "Estilo"), {"Barras", "Espelho"}, "VizStyle", function() N.buildViz() end)
+	Slider(pWid, tr("Quantidade de barras", "Number of bars", "Cantidad de barras"), 8, 64, "VizBars", function() N.buildViz() end)
+	Slider(pWid, tr("Altura", "Height", "Altura"), 30, 200, "VizHeight", function() N.buildViz() end, " px")
+	Toggle(pWid, tr("Cobrir a largura da tela", "Full screen width", "Cubrir el ancho de pantalla"), "VizFull", function() N.buildViz() end)
+	Button(pWid, tr("▶ Tocar música (ID da aba Ferramentas)", "▶ Play music (ID from Tools tab)", "▶ Reproducir música (ID de Herramientas)"), function() if G.Z and G.Z.musicPlay then G.Z.musicPlay() end end)
+	Button(pWid, tr("■ Parar música", "■ Stop music", "■ Parar música"), function() if G.Z and G.Z.musicStop then G.Z.musicStop() end end)
+	Section(pWid, "Skill Pad")
+	Label(pWid, tr("Botões de tecla na tela (segura enquanto toca). Ótimo para celular.", "On-screen key buttons (held while pressed). Great for mobile.", "Botones de tecla en pantalla (se mantienen al tocar). Ideal para móvil."))
+	Toggle(pWid, tr("Mostrar Skill Pad", "Show Skill Pad", "Mostrar Skill Pad"), "PadOn", function() N.applyWidgets() end)
+	Input(pWid, tr("Teclas (separadas por vírgula)", "Keys (comma separated)", "Teclas (separadas por coma)"), "Z,X,C,V,F", function(t) State.PadKeys = t; N.buildPad() end)
+	InfoRow(pWid, tr("Teclas atuais", "Current keys", "Teclas actuales"), function() return State.PadKeys end)
+	Slider(pWid, tr("Tamanho dos botões", "Button size", "Tamaño de botones"), 30, 70, "PadSize", function() N.buildPad() end, " px")
+	Slider(pWid, tr("Opacidade do fundo", "Background opacity", "Opacidad del fondo"), 0, 90, "PadAlpha", function() N.applyWidgets() end, "%")
+	Section(pWid, tr("Menu radial", "Radial menu", "Menú radial"))
+	Label(pWid, tr("Um botão ✦ na tela. Toque para abrir o círculo com suas funções.", "A ✦ button on screen. Tap to open the circle with your features.", "Un botón ✦ en pantalla. Toca para abrir el círculo."))
+	Toggle(pWid, tr("Mostrar menu radial", "Show radial menu", "Mostrar menú radial"), "RadialOn", function() N.applyWidgets() end)
+	Slider(pWid, tr("Tamanho do botão central", "Center button size", "Tamaño del botón central"), 34, 70, "RadialSize", function() N.buildRadial() end, " px")
+	Dropdown(pWid, tr("Função", "Feature", "Función"), G.FeatNames, "RadialPick")
+	Button(pWid, tr("Adicionar ao menu radial", "Add to radial menu", "Añadir al menú radial"), function()
+		for _, n in ipairs(State.RadialItems) do if n == State.RadialPick then notify("Radial", tr("Já está no menu.", "Already in the menu.", "Ya está en el menú."), 2) return end end
+		if #State.RadialItems >= 10 then notify("Radial", tr("Máximo de 10 itens.", "Maximum of 10 items.", "Máximo 10 elementos."), 2) return end
+		table.insert(State.RadialItems, State.RadialPick)
+		N.buildRadial()
+	end)
+	Button(pWid, tr("Remover do menu radial", "Remove from radial menu", "Quitar del menú radial"), function()
+		for i, n in ipairs(State.RadialItems) do if n == State.RadialPick then table.remove(State.RadialItems, i) break end end
+		N.buildRadial()
+	end)
+	Button(pWid, tr("Limpar menu radial", "Clear radial menu", "Limpiar menú radial"), function() State.RadialItems = {}; N.buildRadial() end)
+
+	------------------------------------------------ PERFIL
+	local pPro = newPage("Perfil", "Profile", "Perfil", "☻")
+	local head = row(pPro, 96)
+	local av = new("ImageLabel", {Size = UDim2.fromOffset(74, 74), Position = UDim2.fromOffset(12, 11), BackgroundColor3 = T.side, Parent = head}, {corner(37)})
+	bind(av, "BackgroundColor3", "side")
+	bind(new("UIStroke", {Color = T.accent, Thickness = 2.5, Parent = av}), "Color", "accent")
+	task.spawn(function()
+		local ok, img = pcall(function() return Players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150) end)
+		if ok then av.Image = img end
+	end)
+	mkText({Size = UDim2.new(1, -110, 0, 26), Position = UDim2.fromOffset(98, 14), Text = lp.DisplayName, TextSize = 17, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head}, true)
+	local rankLb = mkText({Size = UDim2.new(1, -110, 0, 22), Position = UDim2.fromOffset(98, 42), Text = "", TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, Parent = head}, true, "accent")
+	local barBG = new("Frame", {Size = UDim2.new(1, -110, 0, 8), Position = UDim2.fromOffset(98, 70), BackgroundColor3 = T.sub, Parent = head}, {corner(4)})
+	bind(barBG, "BackgroundColor3", offColor)
+	local barFill = new("Frame", {Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = white, Parent = barBG}, {corner(4)})
+	bind(new("UIGradient", {Parent = barFill}), "Color", gradSeq, true)
+	local nextLb = Label(pPro, "")
+	G.loop(2, function()
+		local r = N.rank()
+		rankLb.Text = r.icon .. "  " .. r.name .. string.format("   (%.1f h)", r.hours)
+		barFill.Size = UDim2.new(r.ratio, 0, 1, 0)
+		nextLb.Text = r.nextName and (tr("Próximo rank: ", "Next rank: ", "Próximo rango: ") .. r.nextName .. " (" .. r.nextH .. " h)") or tr("Rank máximo atingido! 💎", "Max rank reached! 💎", "¡Rango máximo alcanzado! 💎")
+	end)
+	Section(pPro, tr("Sequência de dias", "Day streak", "Racha de días"))
+	InfoRow(pPro, tr("Sequência atual", "Current streak", "Racha actual"), function() return N.streak.n .. tr(" dias", " days", " días") end)
+	InfoRow(pPro, tr("Melhor sequência", "Best streak", "Mejor racha"), function() return N.streak.best .. tr(" dias", " days", " días") end)
+	InfoRow(pPro, tr("Hoje é dia", "Today is", "Hoy es"), function() return os.date("%d/%m/%Y") end)
+	Section(pPro, tr("Totais", "Totals", "Totales"))
+	InfoRow(pPro, tr("Level", "Level", "Nivel"), function() return commas(G.dataVal("Level") or 0) end)
+	InfoRow(pPro, tr("Horas jogadas (todas as sessões)", "Hours played (all sessions)", "Horas jugadas (todas)"), function() return string.format("%.1f h", (G.Y and G.Y.life and G.Y.life.secs or 0) / 3600) end)
+	InfoRow(pPro, tr("Kills totais", "Total kills", "Kills totales"), function() return commas(G.Y and G.Y.life and G.Y.life.kills or 0) end)
+	InfoRow(pPro, tr("Conquistas", "Achievements", "Logros"), function()
+		local n = 0
+		for _ in pairs(State.Ach) do n = n + 1 end
+		return n .. " / " .. #G.A8.list
+	end)
+	Section(pPro, tr("Cartão de perfil", "Profile card", "Tarjeta de perfil"))
+	local cardLb = Label(pPro, "—")
+	G.loop(3, function() cardLb.Text = N.cardText() end)
+	Button(pPro, tr("Copiar cartão", "Copy card", "Copiar tarjeta"), function()
+		pcall(function() setclipboard(N.cardText()) end)
+		notify(tr("Perfil", "Profile", "Perfil"), tr("Cartão copiado!", "Card copied!", "¡Tarjeta copiada!"), 2)
+	end)
+	Button(pPro, tr("Enviar cartão ao Discord", "Send card to Discord", "Enviar tarjeta a Discord"), function()
+		local was = State.WebhookOn
+		State.WebhookOn = true
+		local ok = G.V.webhook("🪪 " .. lp.DisplayName, N.cardText(), 3447003)
+		State.WebhookOn = was
+		notify(tr("Perfil", "Profile", "Perfil"), ok and tr("Enviado!", "Sent!", "¡Enviado!") or tr("Configure o webhook primeiro.", "Set up the webhook first.", "Configura el webhook primero."), 3)
+	end)
+
+	------------------------------------------------ v80
+	local pV = newPage("v80", "v80", "v80", "✧")
+	Section(pV, tr("Resumo do v80", "v80 summary", "Resumen de v80"))
+	InfoRow(pV, tr("Temas disponíveis", "Available themes", "Temas disponibles"), function() return tostring(#ThemeNames - 1) end)
+	InfoRow(pV, tr("Idiomas na tela de escolha", "Languages on the start screen", "Idiomas en la pantalla inicial"), function() return tostring(#(genv.AppleHubLangs or {})) end)
+	InfoRow(pV, tr("Idiomas com menu traduzido", "Languages with translated menu", "Idiomas con menú traducido"), function() return tostring(N.langCount) end)
+	Toggle(pV, tr("Saudação ao abrir", "Greeting on start", "Saludo al abrir"), "Greeting")
+	Label(pV, tr("Os 8 idiomas novos (nl, uk, ro, sv, cs, el, hi, th) traduzem abas, seções e os botões principais. O resto do menu aparece em inglês ou português.", "The 8 new languages (nl, uk, ro, sv, cs, el, hi, th) translate tabs, sections and main buttons. The rest of the menu shows in English or Portuguese.", "Los 8 idiomas nuevos traducen pestañas, secciones y botones principales. El resto aparece en inglés o portugués."))
+	Label(pV, tr("Dica: no console use  gen 200  /  mix dracula 40  /  pomo start  /  rank", "Tip: in the console use  gen 200  /  mix dracula 40  /  pomo start  /  rank", "Consejo: en la consola usa  gen 200  /  mix dracula 40  /  pomo start  /  rank"))
+
+	-- console
+	local V = G.V
+	local oldRun = V.run
+	V.run = function(text)
+		local cmd, rest = tostring(text):match("^%s*(%S+)%s*(.*)$")
+		if not cmd then return end
+		local c, say = cmd:lower(), V.say
+		local mine = {pomo = true, gen = true, mix = true, rank = true, confetti = true}
+		if not mine[c] then return oldRun(text) end
+		say("> " .. text)
+		if c == "pomo" then
+			local a = rest:lower()
+			if a == "start" then N.PM.run = true; say("pomodoro: ligado")
+			elseif a == "stop" then N.PM.run = false; say("pomodoro: pausado")
+			elseif a == "skip" then N.PM.phase = (N.PM.phase == "work") and "break" or "work"; N.PM.left = (N.PM.phase == "work") and State.PomoWork * 60 or State.PomoBreak * 60; say("fase: " .. N.PM.phase)
+			else say("uso: pomo start | stop | skip") end
+		elseif c == "gen" then
+			local h, s = rest:match("^(%d+)%s*(%d*)$")
+			if not h then say("uso: gen 210 [70]") return end
+			State.GenHue = math.clamp(tonumber(h), 0, 360)
+			if s ~= "" then State.GenSat = math.clamp(tonumber(s), 10, 100) end
+			syncAll()
+			N.gen()
+			say("paleta gerada")
+		elseif c == "mix" then
+			local name, p = rest:match("^(%S+)%s*(%d*)$")
+			if not name then say("uso: mix dracula 40") return end
+			State.MixB = name
+			if p ~= "" then State.MixPct = math.clamp(tonumber(p), 0, 100) end
+			syncAll()
+			N.mix()
+		elseif c == "rank" then
+			local r = N.rank()
+			say(r.icon .. " " .. r.name .. string.format(" (%.1f h)  •  streak %d", r.hours, N.streak.n))
+		elseif c == "confetti" then
+			N.confetti()
+		end
+	end
+
+	-- abre tudo
+	N.applyFx()
+	N.buildAurora()
+	N.buildViz()
+	N.buildPad()
+	N.buildRadial()
+	N.applyWidgets()
+	if State.DailyTheme then N.daily(true) end
+	layoutTabs()
+
+	-- saudação por horário, no idioma escolhido
+	local GREET = {
+		pt = {"Bom dia", "Boa tarde", "Boa noite"}, en = {"Good morning", "Good afternoon", "Good evening"}, es = {"Buenos días", "Buenas tardes", "Buenas noches"},
+		fr = {"Bonjour", "Bon après-midi", "Bonsoir"}, de = {"Guten Morgen", "Guten Tag", "Guten Abend"}, it = {"Buongiorno", "Buon pomeriggio", "Buonasera"},
+		ru = {"Доброе утро", "Добрый день", "Добрый вечер"}, tr = {"Günaydın", "İyi günler", "İyi akşamlar"}, id = {"Selamat pagi", "Selamat siang", "Selamat malam"},
+		zh = {"早上好", "下午好", "晚上好"}, ja = {"おはよう", "こんにちは", "こんばんは"}, ko = {"좋은 아침", "좋은 오후", "좋은 저녁"},
+		ar = {"صباح الخير", "طاب يومك", "مساء الخير"}, vi = {"Chào buổi sáng", "Chào buổi chiều", "Chào buổi tối"}, pl = {"Dzień dobry", "Dzień dobry", "Dobry wieczór"},
+		nl = {"Goedemorgen", "Goedemiddag", "Goedenavond"}, uk = {"Доброго ранку", "Добрий день", "Добрий вечір"}, ro = {"Bună dimineața", "Bună ziua", "Bună seara"},
+		sv = {"God morgon", "God eftermiddag", "God kväll"}, cs = {"Dobré ráno", "Dobré odpoledne", "Dobrý večer"}, el = {"Καλημέρα", "Καλό απόγευμα", "Καλησπέρα"},
+		hi = {"सुप्रभात", "नमस्कार", "शुभ संध्या"}, th = {"สวัสดีตอนเช้า", "สวัสดีตอนบ่าย", "สวัสดีตอนเย็น"},
+	}
+	task.delay(6, function()
+		if not (alive and State.Greeting) then return end
+		local h = tonumber(os.date("%H")) or 12
+		local slot = (h >= 5 and h < 12) and 1 or ((h >= 12 and h < 18) and 2 or 3)
+		local g = GREET[genv.AppleHubLang or "pt"] or GREET.en
+		notify("Apple Hub v80", g[slot] .. ", " .. lp.DisplayName .. "! ✦", 4)
+	end)
+end)()
